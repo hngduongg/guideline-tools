@@ -3429,3 +3429,364 @@ Tới đây là hết giáo trình Go trong file này: từ in một dòng chữ
 ---
 
 *Giáo trình Go đầy đủ: 55 bài và 6 phụ lục, viết trong cùng 1 file, học dần từng bài một, làm project thật rồi quay lại tra cứu khi cần.*
+
+---
+
+## Phần bổ sung mở rộng cuối cùng: viết hết các phần chuyên sâu còn lại
+
+Phần này viết thêm theo yêu cầu của Hoàng Dươngg: viết hết cho đầy đủ. Đây là các phần chuyên sâu còn lại sau 55 bài, vẫn viết vào cùng 1 file, vẫn giữ nhịp một bài một khái niệm chính, bóc từng dòng, dễ hiểu nhưng đầy đủ. Các bài này là mảng chuyên, không phải ai cũng cần học hết, cậu đọc bài nào khi làm đúng project đó thì mới cần, còn lại chỉ cần biết tên gọi là đủ.
+
+---
+
+## Bài 56. Nhập dữ liệu nâng cao: đọc cả dòng, đổi chuỗi thành số
+
+Bài này là phần còn thiếu của Bài 10, viết đầy đủ ở đây để cậu không phải quay lại tìm nữa.
+
+### Đọc cả dòng có dấu cách bằng bufio
+
+`Scanln` dừng ở dấu cách, nên gõ "Xin chao Capybara" thì nó chỉ lấy được "Xin". Muốn lấy cả dòng có dấu cách thì dùng `bufio`:
+
+```go
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "os"
+    "strings"
+)
+
+func main() {
+    fmt.Println("Nhap ho ten cua ban:")
+    doc := bufio.NewReader(os.Stdin)
+    dong, _ := doc.ReadString('\n')
+    dong = strings.TrimSpace(dong)
+    fmt.Println("Xin chao " + dong)
+}
+```
+
+Bóc:
+
+- `bufio.NewReader(os.Stdin)`: tạo một bộ đọc có đệm từ bàn phím, `os.Stdin` là đầu vào chuẩn, tức là bàn phím.
+- `doc.ReadString('\n')`: đọc cho tới khi gặp ký tự xuống dòng, tức là tới khi người dùng nhấn Enter, nên lấy được cả dòng có dấu cách.
+- `strings.TrimSpace(dong)`: cắt khoảng trắng và dấu xuống dòng ở đầu và cuối dòng vừa đọc, vì `ReadString` giữ lại cả dấu xuống dòng ở cuối.
+- Bài này chạy trên máy thật hoặc Termux, không chạy gõ tương tác được trên Go Playground, giống như Bài 10.
+
+### Nhập nhiều giá trị một lần bằng Scanln
+
+`Scanln` nhận được nhiều hộp cùng lúc, mỗi giá trị gõ cách nhau bằng dấu cách:
+
+```go
+var ten string
+var tuoi int
+fmt.Println("Nhap ten va tuoi, cach nhau bang dau cach:")
+fmt.Scanln(&ten, &tuoi)
+fmt.Println(ten, tuoi)
+```
+
+Gõ `Duongg 18` rồi nhấn Enter thì `ten` là `"Duongg"`, `tuoi` là `18`. Gõ sai kiểu, ví dụ gõ chữ vào chỗ tuổi, thì `Scanln` sẽ báo lỗi và tuổi sẽ không đúng, nên sau này khi làm project thật thì nên kiểm tra lỗi của `Scanln` ngay sau khi gọi.
+
+### Đổi chuỗi thành số bằng strconv
+
+Khi đọc bằng `bufio` thì mọi thứ đọc được đều là chuỗi, muốn tính toán thì phải đổi chuỗi thành số bằng gói `strconv`, viết tắt của string conversion, tức là chuyển đổi chuỗi.
+
+```go
+import "strconv"
+
+soChuoi := "42"
+so, err := strconv.Atoi(soChuoi)
+if err != nil {
+    fmt.Println("Khong doi duoc thanh so:", err)
+    return
+}
+fmt.Println(so + 1) // 43
+
+soThanhChuoi := strconv.Itoa(43)
+fmt.Println(soThanhChuoi + " la chuoi")
+```
+
+- `strconv.Atoi`: đổi chuỗi thành số nguyên, `Atoi` là viết tắt của ASCII to integer. Lỗi thì trả về lỗi, ví dụ chuỗi `"abc"` không đổi được thành số.
+- `strconv.Itoa`: đổi số nguyên thành chuỗi, `Itoa` là integer to ASCII.
+- Đổi số thực thì dùng `strconv.ParseFloat(chuoi, 64)`, số 64 là độ chính xác float64, giống như ở Bài 19.
+
+---
+
+## Bài 57. Reflect: đọc cấu trúc của chương trình lúc đang chạy
+
+Khái niệm mới duy nhất: `reflect`, tức là phản chiếu, soi chương trình của chính mình lúc đang chạy để xem một giá trị thuộc kiểu gì, có những trường nào, giá trị của từng trường là bao nhiêu.
+
+Từ tiếng Anh: `reflect` = phản chiếu, soi lại.
+
+Code:
+
+```go
+package main
+
+import (
+    "fmt"
+    "reflect"
+)
+
+type Nguoi struct {
+    Ten  string `json:"ten"`
+    Tuoi int    `json:"tuoi"`
+}
+
+func main() {
+    d := Nguoi{Ten: "Duongg", Tuoi: 18}
+    kieu := reflect.TypeOf(d)
+    giaTri := reflect.ValueOf(d)
+
+    fmt.Println(kieu.Name())
+    for i := 0; i < kieu.NumField(); i++ {
+        truong := kieu.Field(i)
+        fmt.Println(truong.Name, truong.Tag.Get("json"), giaTri.Field(i))
+    }
+}
+```
+
+Bóc:
+
+- `reflect.TypeOf(d)`: lấy kiểu của giá trị `d`, tức là `Nguoi`, và thông tin về các trường của nó.
+- `reflect.ValueOf(d)`: lấy giá trị thật của `d` để đọc từng trường.
+- `kieu.NumField()`: số trường trong struct.
+- `kieu.Field(i)`: thông tin trường thứ `i`, gồm tên trường và tag của nó.
+- `truong.Tag.Get("json")`: lấy giá trị của tag `json` của trường đó, ví dụ trường `Ten` thì tag `json` là `"ten"`.
+- `giaTri.Field(i)`: giá trị của trường thứ `i`.
+
+Kết quả:
+
+```
+Nguoi
+Ten ten Duongg
+Tuoi tuoi 18
+```
+
+Dùng reflect khi nào: khi viết thư viện chung chung, ví dụ thư viện JSON phải đọc bất cứ struct nào mà không biết trước struct đó có những trường nào, thì nó dùng reflect để soi struct rồi mới biết cách đổi sang JSON. Code ứng dụng bình thường thì không nên dùng reflect nhiều, vì code dùng reflect khó đọc, chậm hơn code viết trực tiếp, và mất kiểm tra kiểu lúc biên dịch, sai kiểu thì tới lúc chạy mới phát hiện ra.
+
+---
+
+## Bài 58. Cgo và unsafe: gọi code C và phá vỡ an toàn kiểu
+
+Bài này viết để cậu biết tên gọi và cảnh báo, không phải để khuyến khích dùng hàng ngày.
+
+### Cgo: gọi code C từ Go
+
+Cgo là cách Go gọi code viết bằng ngôn ngữ C. Muốn dùng cgo thì máy phải có trình biên dịch C, và file Go phải có dòng chú thích đặc biệt ngay trên dòng `import "C"`.
+
+```go
+/*
+#include <stdio.h>
+*/
+import "C"
+
+import "fmt"
+
+func main() {
+    C.puts(C.CString("Xin chao tu C"))
+    fmt.Println("Xin chao tu Go")
+}
+```
+
+Bóc, ở mức khái niệm:
+
+- Phần trong `/* ... */` ngay trên `import "C"` là code C sẽ được chèn vào, ở đây là khai báo hàm `puts` của C.
+- `C.CString(...)`: đổi chuỗi Go thành chuỗi C, vì hai ngôn ngữ lưu chuỗi khác nhau.
+- `C.puts(...)`: gọi hàm `puts` của C để in ra màn hình.
+
+Cgo làm chương trình chậm hơn khi gọi qua lại nhiều lần, khó build cross-compile như Bài 53, và phụ thuộc vào trình biên dịch C trên máy build. Vì vậy chỉ dùng cgo khi thật sự cần dùng một thư viện C có sẵn mà không có bản Go tương đương, ví dụ thư viện xử lý ảnh hoặc âm thanh chuyên dụng.
+
+### Unsafe: phá vỡ kiểm tra kiểu của Go
+
+Gói `unsafe` cho phép cậu làm những việc Go bình thường cấm, ví dụ đổi một con trỏ kiểu này thành con trỏ kiểu khác, đọc bộ nhớ trực tiếp, hoặc tính kích thước của kiểu dữ liệu theo byte.
+
+```go
+import "unsafe"
+
+x := 10
+fmt.Println(unsafe.Sizeof(x)) // 8 trên máy 64-bit, vì int chiếm 8 byte
+```
+
+- `unsafe.Sizeof` trả về số byte mà một giá trị chiếm trong bộ nhớ.
+- Dùng `unsafe` sai thì chương trình có thể đọc nhầm bộ nhớ, ghi đè lên dữ liệu khác, và chết một cách khó gỡ, mà trình biên dịch cũng không báo trước cho cậu.
+- Quy tắc thực hành: đừng dùng `unsafe` trong code ứng dụng bình thường. Chỉ thư viện hệ thống, thư viện hiệu năng rất cao, hoặc code giao tiếp với hệ điều hành mới cần tới nó, và khi đó phải có test rất kỹ.
+
+
+---
+
+## Bài 59. Game, GUI và mobile bằng Go: khi nào chọn, khi nào không
+
+Bài này giới thiệu các mảng mà Go không phải là lựa chọn chính, để cậu biết tên gọi và không mất thời gian đi sai hướng khi làm đúng mảng đó.
+
+### Game bằng Go với Ebitengine
+
+Ebitengine, trước đây gọi là Ebiten, là thư viện làm game 2D bằng Go phổ biến nhất. Cách làm game 2D bằng Ebitengine là: viết một struct game có hàm `Update` để cập nhật trạng thái mỗi khung hình, hàm `Draw` để vẽ, và hàm `Layout` để báo kích thước màn hình, rồi gọi `ebiten.RunGame` để chạy vòng lặp game.
+
+- Ưu điểm: viết bằng Go thuần, chạy được trên nhiều hệ điều hành, làm game 2D nhỏ và vừa rất tiện.
+- Hạn chế: làm game 3D lớn, đồ họa nặng, thì các engine chuyên game như Unity hoặc Unreal vẫn mạnh hơn nhiều, vì chúng có sẵn công cụ làm màn chơi, vật lý, ánh sáng.
+
+### Giao diện máy tính bằng Fyne và Wails
+
+- Fyne: thư viện làm giao diện máy tính bằng Go thuần, viết giao diện bằng code Go, chạy được trên Windows, macOS và Linux mà không cần trình duyệt. Phù hợp làm công cụ nhỏ có giao diện đơn giản.
+- Wails: cách làm giao diện bằng web, tức là giao diện viết bằng HTML, CSS, JavaScript như làm web, còn logic phía sau viết bằng Go, hai bên nói chuyện với nhau qua cầu nối của Wails. Phù hợp khi cậu đã quen làm web và muốn giao diện đẹp như web mà vẫn có sức mạnh của Go ở phía sau.
+
+### Mobile bằng gomobile
+
+Gomobile là công cụ của Go để viết app điện thoại, hoặc viết thư viện Go rồi gọi từ app Android và iOS viết bằng ngôn ngữ khác. Làm app điện thoại hoàn toàn bằng Go thì ít người làm, vì hệ sinh thái giao diện điện thoại của Go không mạnh bằng Flutter, React Native, hay viết native bằng Kotlin và Swift. Cách dùng Go cho mobile phổ biến hơn là: viết logic lõi bằng Go, đóng gói thành thư viện, rồi app điện thoại gọi thư viện đó.
+
+Kết luận cho bài này: Go mạnh nhất ở backend, công cụ dòng lệnh, và hệ thống phân tán. Game 2D nhỏ thì dùng Ebitengine được, công cụ có giao diện đơn giản thì dùng Fyne hoặc Wails được, còn game lớn, app điện thoại phức tạp thì nên chọn công cụ chuyên cho mảng đó thay vì cố dùng Go cho mọi thứ.
+
+---
+
+## Bài 60. Hệ thống phân tán nâng cao: Raft, tracing, errgroup, sync.Pool
+
+Bài này là phần nâng cao của Bài 32 và Bài 55, dành cho khi hệ thống có nhiều server cùng chạy.
+
+### Raft: đồng thuận giữa nhiều server
+
+Raft là thuật toán để nhiều server cùng đồng ý với nhau về một dữ liệu chung, dù một vài server bị chết hoặc mất kết nối. Ví dụ đời thường: một nhóm người cùng viết một biên bản, phải bầu ra một người trưởng nhóm ghi biên bản, các thành viên khác chép theo trưởng nhóm, nếu trưởng nhóm mất liên lạc thì nhóm bầu lại trưởng nhóm mới từ biên bản đã chép tới đâu.
+
+Các vai trò trong Raft:
+
+- Leader: trưởng nhóm, nhận yêu cầu ghi và gửi cho các thành viên khác.
+- Follower: thành viên chép theo leader.
+- Candidate: thành viên ứng cử làm leader khi không nghe thấy leader cũ nữa.
+
+Trong Go, cậu không cần tự viết Raft từ đầu cho project bình thường, vì đã có thư viện Raft sẵn, ví dụ `hashicorp/raft`, hoặc dùng cơ sở dữ liệu phân tán đã có Raft bên trong như etcd. Bài này chỉ để cậu hiểu tên gọi và ý tưởng khi gặp trong tài liệu hệ thống phân tán.
+
+### Tracing với OpenTelemetry: theo dõi một yêu cầu qua nhiều service
+
+Khi một yêu cầu đi qua nhiều service, log ở từng service riêng lẻ sẽ rất khó ghép lại với nhau để biết yêu cầu đó đi đâu và chậm ở đâu. Tracing là cách gắn một mã theo dõi chung cho cả hành trình của yêu cầu, mỗi service ghi lại thời gian bắt đầu và kết thúc của phần việc của mình với cùng mã đó, rồi công cụ tracing vẽ lại toàn bộ hành trình thành một cây.
+
+OpenTelemetry là chuẩn chung để làm tracing, log và đo lường, Go có thư viện OpenTelemetry chính thức. Trong code, cậu tạo một span, tức là một đoạn công việc, ở đầu hàm, và đóng span ở cuối hàm bằng `defer`, công cụ sẽ tự ghép các span lại với nhau theo mã theo dõi.
+
+### errgroup và sync.Pool, sync.Map
+
+- `errgroup`: gói trong `golang.org/x/sync`, giúp chạy nhiều goroutine cùng lúc và lấy lỗi đầu tiên gặp phải về, đồng thời hủy các goroutine còn lại khi đã có lỗi. Dùng khi cậu có nhiều việc song song mà chỉ cần một việc lỗi là cả nhóm dừng lại.
+- `sync.Pool`: hồ tái sử dụng đồ vật, ví dụ tái sử dụng bộ đệm byte, để tránh cấp phát bộ nhớ mới liên tục. Lấy đồ từ hồ ra dùng, dùng xong thì trả lại hồ, lần sau lấy lại đồ cũ mà dùng tiếp.
+- `sync.Map`: map an toàn cho nhiều goroutine cùng dùng mà không cần khóa tay bằng mutex. Dùng khi map bị nhiều goroutine đọc và ghi cùng lúc, còn map bình thường chỉ dùng trong một goroutine hoặc đã có mutex bảo vệ thì dùng map bình thường cho nhanh và dễ đọc hơn.
+
+---
+
+## Bài 61. Hàng đợi và cache chi tiết: Redis, Kafka, NATS
+
+Bài này là phần chi tiết của message queue đã nhắc ở Bài 55, cộng thêm cache, vì hai thứ này hay đi chung trong project thật.
+
+### Redis: cache và hàng đợi nhẹ
+
+Redis là cơ sở dữ liệu lưu trong bộ nhớ, rất nhanh, dùng làm cache, tức là nơi lưu tạm kết quả hay dùng để khỏi phải tính lại hoặc hỏi cơ sở dữ liệu chính nhiều lần, và dùng làm hàng đợi nhẹ.
+
+Các kiểu dữ liệu hay dùng trong Redis:
+
+- String: lưu một giá trị đơn, ví dụ lưu session của người dùng với thời gian hết hạn.
+- List: hàng đợi, gửi việc vào cuối danh sách, lấy việc từ đầu danh sách ra làm.
+- Set: tập hợp không trùng lặp, ví dụ lưu danh sách người dùng đang online.
+- Hash: từ điển, ví dụ lưu thông tin của một người dùng dưới dạng nhiều trường.
+
+Code khái niệm với thư viện Redis của Go, ở mức đủ hiểu luồng, chưa cần chạy server Redis thật:
+
+```go
+client.Set(ctx, "ten", "Duongg", 0)
+ten, err := client.Get(ctx, "ten").Result()
+```
+
+- `Set` lưu giá trị với khóa là `"ten"`, thời gian hết hạn là 0 nghĩa là không hết hạn.
+- `Get` lấy giá trị theo khóa, lỗi nếu khóa không tồn tại hoặc đã hết hạn.
+- Khi dùng Redis làm cache thì luôn có chiến lược khi cache miss, tức là không tìm thấy trong cache thì hỏi cơ sở dữ liệu chính rồi lưu kết quả vào cache cho lần sau, và khi dữ liệu chính đổi thì xóa hoặc cập nhật cache cũ đi, không thì cache sẽ trả về dữ liệu cũ sai.
+
+### Kafka: hàng đợi cho lượng tin nhắn rất lớn
+
+Kafka là hệ thống hàng đợi phân tán cho lượng tin nhắn rất lớn, ví dụ hàng triệu sự kiện một ngày. Dữ liệu trong Kafka được tổ chức thành topic, tức là chủ đề, và partition, tức là phần chia nhỏ của topic để nhiều máy cùng xử lý song song.
+
+- Producer: bên gửi tin nhắn vào topic.
+- Consumer: bên đọc tin nhắn từ topic ra xử lý, nhiều consumer cùng một nhóm sẽ chia nhau các partition để xử lý song song.
+- Tin nhắn trong Kafka không bị xóa ngay khi đọc xong, mà giữ lại một thời gian để consumer khác đọc lại hoặc consumer lỗi có thể đọc lại từ đầu.
+
+Dùng Kafka khi lượng tin nhắn lớn, cần giữ lại lịch sử tin nhắn, và cần nhiều service cùng đọc một luồng sự kiện. Dùng hàng đợi nhẹ hơn như Redis hoặc NATS khi lượng tin nhắn vừa và cần đơn giản.
+
+### NATS: hàng đợi nhẹ và nhanh cho hệ thống Go
+
+NATS là hệ thống nhắn tin nhẹ, nhanh, viết bằng Go, dùng cho service Go nói chuyện với nhau. NATS có hai kiểu chính:
+
+- Pub/Sub: bên gửi gửi tin nhắn lên một chủ đề, mọi bên đăng ký chủ đề đó đều nhận được, không cần biết bên gửi là ai.
+- Request/Reply: bên gửi gửi yêu cầu và chờ câu trả lời, giống như gọi hàm qua mạng nhưng qua NATS.
+
+Chọn NATS khi hệ thống Go cần nhắn tin nhanh, nhẹ, và không cần giữ lịch sử tin nhắn lâu như Kafka.
+
+---
+
+## Bài 62. gRPC và WebSocket chi tiết
+
+Bài này là phần chi tiết của Bài 48, viết code khung đủ để cậu nhận ra khi gặp trong project thật, chưa cần chạy server gRPC thật ngay.
+
+### gRPC chi tiết: định nghĩa bằng file .proto
+
+Bước đầu tiên của gRPC không phải viết code Go, mà là viết file `.proto` để định nghĩa service và dữ liệu:
+
+```proto
+syntax = "proto3";
+
+package todo;
+
+service TodoService {
+  rpc LayDanhSach (YeuCauRong) returns (DanhSachViec);
+}
+
+message YeuCauRong {}
+
+message Viec {
+  int32 id = 1;
+  string ten = 2;
+  bool xong = 3;
+}
+
+message DanhSachViec {
+  repeated Viec viec = 1;
+}
+```
+
+Bóc:
+
+- `service TodoService`: định nghĩa một service có một hàm `LayDanhSach`.
+- `rpc LayDanhSach (YeuCauRong) returns (DanhSachViec)`: hàm này nhận một yêu cầu rỗng và trả về danh sách việc.
+- `message`: định nghĩa dữ liệu, mỗi trường có một số thứ tự, ví dụ `id = 1`, `ten = 2`, số này dùng để mã hóa nhị phân, không được đổi lung tung sau khi đã dùng.
+- `repeated`: nghĩa là danh sách, tương đương slice trong Go.
+
+Sau khi viết file `.proto` thì chạy công cụ `protoc` với plugin Go để sinh code Go từ file đó, rồi cậu chỉ việc viết hàm xử lý thật cho service đó, còn việc mã hóa, gửi nhận qua mạng thì code sinh ra lo hết.
+
+### WebSocket chi tiết: echo server
+
+WebSocket echo server là server nhận tin nhắn nào thì gửi lại đúng tin nhắn đó cho người gửi, dùng để test và làm mẫu cho chat trực tiếp.
+
+Luồng làm việc, ở mức khái niệm với thư viện WebSocket phổ biến của Go:
+
+1. Trình duyệt gửi yêu cầu HTTP bình thường tới server, kèm header xin nâng cấp lên WebSocket.
+2. Server đồng ý nâng cấp, từ đây kết nối không còn là HTTP hỏi đáp nữa, mà thành kết nối hai chiều liên tục.
+3. Server chạy một vòng lặp: đọc tin nhắn từ kết nối, nếu đọc được thì gửi lại đúng tin nhắn đó, nếu kết nối đóng thì thoát vòng lặp và đóng kết nối.
+4. Phía trình duyệt cũng chạy vòng lặp tương tự: gửi tin nhắn đi và nhận tin nhắn về bất cứ lúc nào, không cần hỏi trước.
+
+Khác với HTTP ở chỗ: HTTP server chỉ trả lời khi có yêu cầu, còn WebSocket server có thể tự gửi tin nhắn cho trình duyệt bất cứ lúc nào, ví dụ có người khác nhắn tin tới thì server đẩy tin đó về ngay mà không cần trình duyệt hỏi lại.
+
+---
+
+## Phụ lục G. Bảng tra nhanh phần mở rộng
+
+- `bufio.NewReader`, `ReadString`: đọc cả dòng có dấu cách.
+- `strconv.Atoi`, `Itoa`, `ParseFloat`: đổi chuỗi thành số và ngược lại.
+- `reflect.TypeOf`, `ValueOf`: soi kiểu và giá trị lúc đang chạy.
+- Cgo: gọi code C từ Go, cần trình biên dịch C, dùng khi thật sự cần thư viện C.
+- `unsafe.Sizeof`: số byte của một giá trị, dùng `unsafe` sai thì rất nguy hiểm.
+- Ebitengine: làm game 2D bằng Go. Fyne: giao diện máy tính bằng Go thuần. Wails: giao diện web với logic Go. Gomobile: app điện thoại hoặc thư viện Go cho app điện thoại.
+- Raft: đồng thuận giữa nhiều server, có leader, follower, candidate.
+- OpenTelemetry: tracing, gắn mã theo dõi chung cho một yêu cầu qua nhiều service.
+- `errgroup`: chạy nhiều goroutine, lấy lỗi đầu tiên và hủy các việc còn lại.
+- `sync.Pool`: hồ tái sử dụng đồ vật. `sync.Map`: map an toàn cho nhiều goroutine.
+- Redis: cache và hàng đợi nhẹ, lưu trong bộ nhớ, có String, List, Set, Hash.
+- Kafka: hàng đợi cho lượng tin nhắn rất lớn, có topic, partition, producer, consumer.
+- NATS: hàng đợi nhẹ và nhanh cho hệ thống Go, có Pub/Sub và Request/Reply.
+- gRPC: định nghĩa bằng file `.proto`, service, rpc, message, repeated.
+- WebSocket: nâng cấp từ HTTP thành kết nối hai chiều liên tục, server tự đẩy tin về được.
+
+---
+
+*Giáo trình Go đầy đủ mở rộng: từ 55 bài lên 62 bài và 7 phụ lục, vẫn trong cùng 1 file, học dần từng bài, làm project thật rồi quay lại tra cứu khi cần. Sau phần này, học tiếp không còn là học thêm bài trong giáo trình nữa, mà là đọc tài liệu chính chủ của từng thư viện cụ thể khi làm đúng project đó.*
