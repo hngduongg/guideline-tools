@@ -2754,3 +2754,678 @@ Khi gặp lỗi không hiểu, làm theo thứ tự này: đọc thông báo l�
 ---
 
 *Cập nhật phần project thật: đã viết đầy đủ các bài nâng cao để làm project thật — thời gian, sắp xếp, regex, mẫu song song, Gin, bcrypt và JWT, middleware xác thực và phân quyền, transaction và migration, ORM và sqlx, kiểm thử nâng cao, profiling, log và cấu hình, Docker, project mẫu Todo API có đăng nhập, và lộ trình học dần — theo cùng nhịp một bài một khái niệm, bóc từng dòng, dễ hiểu nhưng vẫn đầy đủ.*
+
+---
+
+## Phần bổ sung cuối: viết thêm cho đầy đủ giáo trình Go
+
+Phần này viết thêm theo yêu cầu của Hoàng Dươngg: còn bài nào thì viết thêm hết cho đầy đủ giáo trình. Vẫn viết vào cùng 1 file `Go/bai-hoc-go-day-du.md`, vẫn giữ nhịp một bài một khái niệm chính, bóc từng dòng, dễ hiểu nhưng đầy đủ. Học phần này thì học dần, mỗi bài làm thử một ví dụ nhỏ rồi mới sang bài sau.
+
+---
+
+## Bài 43. Hàm nâng cao: variadic, closure, đệ quy, receiver
+
+Bốn cách dùng hàm nâng cao hay gặp trong code thật, mỗi cách một ví dụ ngắn.
+
+### Variadic: hàm nhận số lượng đối số không cố định
+
+Từ tiếng Anh: `variadic` = số lượng thay đổi được.
+
+```go
+func tongNhieu(so ...int) int {
+    tong := 0
+    for _, v := range so {
+        tong += v
+    }
+    return tong
+}
+
+fmt.Println(tongNhieu(1, 2, 3)) // 6
+fmt.Println(tongNhieu(10, 20))   // 30
+```
+
+- `so ...int` nghĩa là tham số `so` nhận 0 hoặc nhiều số nguyên, trong hàm thì `so` là một danh sách số nguyên.
+- `tong += v` là viết tắt của `tong = tong + v`.
+- Gọi hàm với bao nhiêu số cũng được, không cần viết lại hàm cho từng số lượng.
+
+### Closure: hàm nhớ hộp bên ngoài
+
+Closure là hàm được tạo ra bên trong một hàm khác, và nhớ được biến của hàm ngoài dù hàm ngoài đã kết thúc.
+
+```go
+func taoDem() func() int {
+    dem := 0
+    return func() int {
+        dem++
+        return dem
+    }
+}
+
+dem1 := taoDem()
+fmt.Println(dem1()) // 1
+fmt.Println(dem1()) // 2
+```
+
+- `taoDem` trả về một hàm, không phải một số.
+- Hàm trả về đó nhớ hộp `dem` của riêng nó, mỗi lần gọi thì tăng `dem` lên 1. Tạo một `dem2 := taoDem()` khác thì `dem2` có hộp `dem` riêng, không chung với `dem1`.
+
+### Đệ quy: hàm tự gọi chính nó
+
+Đệ quy, tiếng Anh là `recursion`, là hàm gọi lại chính nó để giải bài toán nhỏ hơn, cho tới khi gặp trường hợp dừng.
+
+```go
+func giaiThua(n int) int {
+    if n <= 1 {
+        return 1
+    }
+    return n * giaiThua(n-1)
+}
+
+fmt.Println(giaiThua(5)) // 120
+```
+
+- `giaiThua(5)` bằng `5 * giaiThua(4)`, rồi `4 * giaiThua(3)`, cứ thế cho tới `giaiThua(1)` bằng 1 thì dừng và nhân ngược lại.
+- Đệ quy luôn phải có trường hợp dừng, ở đây là `n <= 1`. Quên trường hợp dừng thì hàm gọi mãi không dừng, chương trình sẽ tràn bộ nhớ và chết.
+
+### Receiver: hàm gắn với struct, kiểu giá trị và kiểu con trỏ
+
+Ở Bài 12 cậu đã gặp method với receiver giá trị. Ở đây phân biệt hai loại receiver:
+
+```go
+type Dem struct {
+    GiaTri int
+}
+
+func (d Dem) Xem() int {
+    return d.GiaTri
+}
+
+func (d *Dem) Tang() {
+    d.GiaTri++
+}
+```
+
+- `(d Dem)` là receiver giá trị: hàm nhận một bản copy của struct, đổi trong hàm thì không đổi struct gốc ở ngoài.
+- `(d *Dem)` là receiver con trỏ: hàm nhận địa chỉ của struct, đổi trong hàm thì đổi luôn struct gốc ở ngoài. Vì vậy `Tang` dùng receiver con trỏ, còn `Xem` chỉ đọc thì dùng receiver giá trị là đủ.
+- Quy tắc đơn giản: hàm nào đổi struct thì dùng con trỏ, hàm nào chỉ đọc thì dùng giá trị.
+
+---
+
+## Bài 44. Struct nâng cao: embedding, tag, so sánh
+
+### Embedding: nhúng struct vào struct khác
+
+Embedding là nhúng một struct vào trong một struct khác, để struct ngoài dùng luôn các trường và hàm của struct trong mà không cần viết lại.
+
+```go
+type DiaChi struct {
+    ThanhPho string
+}
+
+type Nguoi struct {
+    Ten string
+    DiaChi
+}
+
+d := Nguoi{Ten: "Duongg", DiaChi: DiaChi{ThanhPho: "Phu Tho"}}
+fmt.Println(d.Ten)
+fmt.Println(d.ThanhPho)
+```
+
+- Trong định nghĩa `Nguoi`, chỉ viết `DiaChi` mà không viết tên trường, đó là embedding.
+- Khi dùng thì viết thẳng `d.ThanhPho`, không cần viết `d.DiaChi.ThanhPho`, vì trường của struct trong đã được nâng lên struct ngoài.
+
+### Tag: ghi chú cho trường
+
+Tag là chuỗi ghi chú trong dấu backtick sau kiểu của trường, thư viện khác sẽ đọc tag này để biết cách xử lý trường đó. Cậu đã gặp tag `json` ở Bài 23, ở đây nhắc lại nguyên tắc chung:
+
+```go
+type Nguoi struct {
+    Ten  string `json:"ten" db:"ten"`
+    Tuoi int    `json:"tuoi" db:"tuoi"`
+}
+```
+
+- Một trường có thể có nhiều tag cho nhiều thư viện, mỗi tag viết theo dạng `ten-thu-vien:"gia-tri"`, cách nhau bằng dấu cách.
+- Tag không ảnh hưởng tới code Go thuần, chỉ thư viện đọc tag mới dùng nó, ví dụ gói `json` đọc tag `json`, thư viện cơ sở dữ liệu đọc tag `db`.
+
+### So sánh struct
+
+Struct so sánh được bằng `==` khi tất cả các trường của nó đều so sánh được. Ví dụ struct chỉ có `string` và `int` thì so sánh được, struct có trường là slice hoặc map thì không so sánh được bằng `==`, vì slice và map không so sánh được như vậy, phải so sánh từng phần tử hoặc dùng thư viện so sánh sâu.
+
+---
+
+## Bài 45. Slice và Map nâng cao
+
+Bài này là phần nâng cao của Bài 11, dùng khi danh sách và từ điển lớn lên trong project thật.
+
+### Make, copy, clear
+
+```go
+s := make([]int, 0, 10)
+fmt.Println(len(s), cap(s)) // 0 10
+
+s = append(s, 1, 2, 3)
+t := make([]int, len(s))
+copy(t, s)
+fmt.Println(t) // [1 2 3]
+
+clear(s)
+fmt.Println(s) // [0 0 0]
+```
+
+Bóc:
+
+- `make([]int, 0, 10)`: tạo danh sách rỗng, độ dài `len` là 0, sức chứa `cap` là 10, tức là đã chuẩn bị sẵn chỗ cho 10 món, thêm vào trong giới hạn đó thì không phải cấp phát lại nhiều lần.
+- `cap` khác `len`: `len` là số món đang có, `cap` là số món tối đa có thể chứa mà không cần cấp phát lại.
+- `copy(t, s)`: copy từng món từ `s` sang `t`, trả về số món đã copy được.
+- `clear(s)`: xóa giá trị của tất cả các món về giá trị 0 của kiểu đó, nhưng độ dài vẫn giữ nguyên, không phải xóa danh sách đi.
+
+### Gói slices và maps của Go mới
+
+Từ Go 1.21 trở đi, Go có sẵn gói `slices` và `maps` để làm những việc hay lặp lại:
+
+```go
+import "slices"
+
+fmt.Println(slices.Contains([]string{"a", "b"}, "b")) // true
+fmt.Println(slices.Index([]int{10, 20, 30}, 20))       // 1
+slices.Sort([]int{3, 1, 2})
+```
+
+- `slices.Contains` kiểm tra danh sách có chứa giá trị không, khỏi cần viết vòng lặp.
+- `slices.Index` tìm vị trí đầu tiên của giá trị, không tìm thấy thì trả về -1.
+- `slices.Sort` sắp xếp, thay cho `sort.Ints` và `sort.Strings` ở Bài 31 khi dùng kiểu chung.
+
+Với map thì dùng gói `maps` để copy, so sánh, xóa nhiều khóa một lúc, thay vì viết vòng lặp tay.
+
+### Sắp xếp theo tiêu chí riêng
+
+Khi danh sách là struct, không phải số hay chữ đơn thuần, thì dùng `sort.Slice` với một hàm so sánh tự viết:
+
+```go
+sort.Slice(danhSach, func(i, j int) bool {
+    return danhSach[i].Tuoi < danhSach[j].Tuoi
+})
+```
+
+- Hàm so sánh nhận hai vị trí `i` và `j`, trả về `true` nếu món ở vị trí `i` nên đứng trước món ở vị trí `j`.
+- Ở ví dụ này là sắp xếp theo tuổi tăng dần, đổi dấu `<` thành `>` thì thành giảm dần.
+
+---
+
+## Bài 46. Chuỗi nâng cao: strings, rune và unicode
+
+Bài này là phần nâng cao của Bài 9, giải thích vì sao đếm chuỗi tiếng Việt có dấu lại khác với đếm chuỗi không dấu.
+
+### Gói strings
+
+```go
+import "strings"
+
+fmt.Println(strings.Join([]string{"a", "b", "c"}, ", ")) // a, b, c
+fmt.Println(strings.Split("a,b,c", ","))                 // [a b c]
+fmt.Println(strings.TrimSpace("  chao  "))               // chao
+fmt.Println(strings.ToUpper("chao"))                     // CHAO
+fmt.Println(strings.HasPrefix("chao ban", "chao"))       // true
+```
+
+- `Join`: nối danh sách chuỗi lại bằng một chuỗi nối ở giữa.
+- `Split`: cắt chuỗi thành danh sách theo chuỗi cắt.
+- `TrimSpace`: cắt khoảng trắng ở đầu và cuối chuỗi.
+- `ToUpper`: đổi thành chữ hoa, `ToLower` đổi thành chữ thường.
+- `HasPrefix`: kiểm tra chuỗi có bắt đầu bằng chuỗi con không, `HasSuffix` kiểm tra có kết thúc bằng chuỗi con không.
+
+### strings.Builder: nối nhiều chuỗi cho nhanh
+
+Nối chuỗi bằng `+` trong vòng lặp nhiều lần sẽ chậm, vì mỗi lần nối là tạo ra một chuỗi mới. Khi nối nhiều lần thì dùng `strings.Builder`:
+
+```go
+var b strings.Builder
+b.WriteString("Xin chao ")
+b.WriteString("Capybara")
+fmt.Println(b.String())
+```
+
+- `WriteString` ghi thêm chuỗi vào bộ đệm, không tạo chuỗi mới mỗi lần.
+- `b.String()` lấy chuỗi cuối cùng ra khi đã ghi xong hết.
+
+### Rune và unicode: vì sao len đếm sai với tiếng Việt có dấu
+
+Ở Bài 9 tớ đã nhắc: `len` đếm theo byte, không phải theo ký tự nhìn thấy. Lý do là Go lưu chuỗi theo UTF-8, mỗi ký tự có thể chiếm 1 byte hoặc nhiều byte. Chữ không dấu chiếm 1 byte, chữ có dấu hoặc emoji chiếm nhiều byte, nên `len` sẽ lớn hơn số ký tự nhìn thấy.
+
+```go
+s := "Chào"
+fmt.Println(len(s)) // 5, không phải 4
+fmt.Println(len([]rune(s))) // 4
+```
+
+- `rune` là kiểu ký tự unicode của Go, một `rune` là một ký tự thật, không phải một byte.
+- `[]rune(s)` đổi chuỗi thành danh sách các `rune`, rồi đếm danh sách đó thì ra số ký tự thật.
+- Khi duyệt chuỗi bằng `range`, Go cũng duyệt theo `rune`, không phải theo byte, nên `for i, r := range s` sẽ cho `r` là từng ký tự thật, còn `i` là vị trí byte bắt đầu của ký tự đó.
+- Quy tắc thực hành: đếm độ dài để hiển thị cho người dùng thì dùng `[]rune`, còn `len` thì dùng khi cần biết kích thước byte để gửi qua mạng hoặc lưu file.
+
+
+---
+
+## Bài 47. HTTP Client: gọi API của người khác
+
+Bài 16 và Bài 33 dạy cậu làm server, bài này dạy cậu làm client, tức là chương trình của cậu đi gọi API của người khác và đọc câu trả lời về.
+
+Code gọi API lấy JSON về:
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "time"
+)
+
+type Nguoi struct {
+    Ten  string `json:"ten"`
+    Tuoi int    `json:"tuoi"`
+}
+
+func main() {
+    client := &http.Client{Timeout: 10 * time.Second}
+
+    resp, err := client.Get("https://vidu.com/api/nguoi/1")
+    if err != nil {
+        fmt.Println("Loi goi API:", err)
+        return
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != 200 {
+        fmt.Println("Ma trang thai khong phai 200:", resp.StatusCode)
+        return
+    }
+
+    var d Nguoi
+    err = json.NewDecoder(resp.Body).Decode(&d)
+    if err != nil {
+        fmt.Println("Loi doc JSON:", err)
+        return
+    }
+    fmt.Println(d.Ten, d.Tuoi)
+}
+```
+
+Bóc:
+
+- `http.Client{Timeout: 10 * time.Second}`: tạo client có thời hạn 10 giây, quá 10 giây mà server chưa trả lời thì hủy, không chờ mãi. Luôn đặt timeout cho client, đừng dùng client mặc định không có timeout trong project thật.
+- `client.Get(...)`: gửi yêu cầu GET tới đường dẫn đó.
+- `defer resp.Body.Close()`: đóng phần thân câu trả lời khi hàm kết thúc, quên đóng thì sẽ rò rỉ kết nối.
+- Kiểm tra `resp.StatusCode` trước khi đọc JSON, vì server có thể trả về mã lỗi kèm nội dung không phải JSON cậu mong đợi.
+- `json.NewDecoder(resp.Body).Decode(&d)`: đọc trực tiếp từ thân câu trả lời và giải mã JSON vào struct, không cần đọc hết về chuỗi trung gian.
+
+Gửi JSON đi bằng POST:
+
+```go
+duLieu, _ := json.Marshal(Nguoi{Ten: "Duongg", Tuoi: 18})
+resp, err := client.Post("https://vidu.com/api/nguoi", "application/json", bytes.NewReader(duLieu))
+```
+
+- `json.Marshal` đóng gói struct thành JSON trước.
+- `bytes.NewReader` đổi JSON thành luồng đọc để gửi đi.
+- Header `Content-Type` là `application/json` báo cho server biết cậu đang gửi JSON, không phải gửi form.
+
+Lỗi hay gặp: quên kiểm tra lỗi của `Get` hoặc `Post` trước khi dùng `resp`, nếu lỗi mà `resp` là `nil` thì dùng tiếp sẽ bị panic.
+
+---
+
+## Bài 48. TCP, UDP, WebSocket và gRPC: các cách nói chuyện khác
+
+HTTP không phải là cách duy nhất để hai chương trình nói chuyện với nhau. Bài này giới thiệu các cách khác ở mức khái niệm, để cậu nhận ra khi gặp trong project thật.
+
+### TCP: nói chuyện có đảm bảo
+
+TCP là giao thức đảm bảo dữ liệu tới đúng thứ tự, không mất, không trùng. HTTP mà cậu dùng hàng ngày cũng chạy trên TCP.
+
+```go
+ln, err := net.Listen("tcp", ":9000")
+if err != nil {
+    fmt.Println("Loi:", err)
+    return
+}
+defer ln.Close()
+
+for {
+    conn, err := ln.Accept()
+    if err != nil {
+        continue
+    }
+    go xuLyKetNoi(conn)
+}
+```
+
+- `net.Listen("tcp", ":9000")`: mở cổng 9000 để nghe kết nối TCP tới.
+- `ln.Accept()`: chờ có kết nối tới, mỗi kết nối mới thì chạy một goroutine riêng để xử lý, để server không bị chặn ở một kết nối.
+- TCP phù hợp khi cần đảm bảo dữ liệu, ví dụ chat, game theo lượt, truyền file.
+
+### UDP: nói chuyện nhanh, không đảm bảo
+
+UDP gửi gói tin đi mà không đảm bảo tới nơi, không đảm bảo thứ tự, nhưng nhanh và nhẹ hơn TCP. Dùng cho video trực tiếp, game thời gian thực, tra cứu DNS, những chỗ mất một gói tin cũng không sao vì gói tiếp theo sẽ tới ngay.
+
+### WebSocket: nói chuyện hai chiều liên tục
+
+HTTP bình thường là: trình duyệt hỏi, server trả lời, xong là hết. WebSocket là: sau khi bắt tay bằng HTTP một lần, kết nối giữ nguyên và cả hai bên đều có thể gửi tin cho nhau bất cứ lúc nào, không cần hỏi trước. Dùng cho chat trực tiếp, thông báo trực tiếp, bảng giá trực tiếp.
+
+### gRPC: gọi hàm qua mạng như gọi hàm trong máy
+
+gRPC là cách gọi hàm ở server khác như gọi hàm trong cùng một chương trình, nhưng dữ liệu truyền đi dưới dạng nhị phân Protobuf, nhỏ và nhanh hơn JSON. Dùng nhiều trong hệ thống microservices, khi nhiều service Go nói chuyện với nhau và cần tốc độ cao. Nhược điểm là khó đọc bằng mắt thường như JSON, và cần định nghĩa schema trước bằng file `.proto`.
+
+Quy tắc chọn: API cho trình duyệt và bên thứ ba thì dùng HTTP với JSON cho dễ đọc và dễ dùng. Service nội bộ cần tốc độ cao thì cân nhắc gRPC. Cần nói chuyện hai chiều liên tục thì cân nhắc WebSocket. Cần đảm bảo dữ liệu thì dùng TCP, cần nhanh và chấp nhận mất gói thì dùng UDP.
+
+---
+
+## Bài 49. Viết CLI: chương trình chạy bằng dòng lệnh
+
+CLI là chương trình chạy trong terminal, nhận tham số từ dòng lệnh, không có giao diện web. Rất nhiều công cụ Go mà cậu dùng hàng ngày, ví dụ chính `go` hay `docker`, đều là CLI.
+
+### Đọc tham số bằng os.Args và flag
+
+```go
+package main
+
+import (
+    "flag"
+    "fmt"
+    "os"
+)
+
+func main() {
+    fmt.Println(os.Args)
+
+    ten := flag.String("ten", "Khach", "Ten nguoi dung")
+    tuoi := flag.Int("tuoi", 0, "Tuoi nguoi dung")
+    flag.Parse()
+
+    fmt.Println("Ten:", *ten)
+    fmt.Println("Tuoi:", *tuoi)
+}
+```
+
+Bóc:
+
+- `os.Args` là danh sách tham số dòng lệnh, phần tử đầu tiên luôn là tên chương trình, các phần tử sau là tham số người dùng gõ.
+- `flag.String("ten", "Khach", "Ten nguoi dung")`: khai báo một cờ tên `ten`, giá trị mặc định là `"Khach"`, mô tả là `"Ten nguoi dung"`. Trả về địa chỉ của giá trị, nên khi dùng phải viết `*ten` để lấy giá trị thật, giống dấu `*` trong con trỏ ở Bài 13.
+- `flag.Parse()`: đọc tham số dòng lệnh thật và bỏ vào các cờ đã khai báo. Quên gọi `Parse` thì các cờ vẫn giữ giá trị mặc định.
+- Chạy chương trình với `./app -ten Duongg -tuoi 18` thì in ra tên Duongg và tuổi 18, chạy không có tham số thì in ra tên mặc định là Khach.
+
+### Cobra: framework CLI phổ biến
+
+Khi CLI có nhiều lệnh con, ví dụ `git add`, `git commit`, `git push`, thì dùng framework Cobra cho gọn, thay vì tự viết `if` cho từng lệnh con. Cobra lo việc phân tích lệnh con, cờ, và in trợ giúp tự động khi người dùng gõ `--help`. Ở giai đoạn này chỉ cần biết tên gọi, khi nào viết CLI có nhiều lệnh con thì mới học sâu Cobra.
+
+---
+
+## Bài 50. Bảo mật web: CORS, rate limit, validation, injection
+
+Bốn việc bảo mật cơ bản nhất cho API, làm thiếu một việc là API rất dễ bị tấn công.
+
+### CORS: ai được gọi API từ trình duyệt khác
+
+CORS là chính sách của trình duyệt: trang web ở domain A không được tự ý gọi API ở domain B, trừ khi API ở domain B cho phép. Server Go phải trả về header `Access-Control-Allow-Origin` với domain được phép, hoặc `*` nếu cho phép mọi domain, nhưng cho phép mọi domain thì chỉ dùng cho API công khai, không dùng cho API cần đăng nhập.
+
+### Rate limit: giới hạn số yêu cầu
+
+Rate limit là giới hạn mỗi người dùng hoặc mỗi IP chỉ được gọi API một số lần nhất định trong một khoảng thời gian, ví dụ 100 lần một phút. Vượt quá thì server trả về mã 429. Làm rate limit để tránh bị gọi dồn dập làm sập server, và tránh bị dò mật khẩu bằng cách thử hàng nghìn mật khẩu một lúc.
+
+Trong Go, có thể dùng middleware rate limit có sẵn, hoặc tự làm bằng token bucket: mỗi người dùng có một xô token, mỗi yêu cầu lấy một token, token hết thì phải chờ token nạp lại.
+
+### Validation: kiểm tra dữ liệu gửi tới
+
+Đừng bao giờ tin dữ liệu người dùng gửi tới. Kiểm tra ở server, không chỉ kiểm tra ở giao diện, vì người dùng có thể gửi trực tiếp bằng `curl` mà bỏ qua giao diện.
+
+- Trường bắt buộc thì kiểm tra có trống không, như `binding:"required"` ở Bài 33.
+- Số thì kiểm tra có trong khoảng hợp lý không, ví dụ tuổi không âm, không lớn hơn 150.
+- Chuỗi thì kiểm tra độ dài tối đa, để tránh gửi chuỗi dài hàng triệu ký tự làm đầy bộ nhớ.
+
+### Injection: SQL injection và XSS
+
+- SQL injection: kẻ tấn công gõ câu SQL vào ô nhập liệu, nếu server nối chuỗi trực tiếp vào câu SQL thì câu đó sẽ chạy thật. Cách tránh đã nhắc ở Bài 30: luôn dùng chỗ trống `$1`, `?` và truyền giá trị riêng, không nối chuỗi trực tiếp.
+- XSS, tức là Cross-Site Scripting: kẻ tấn công gõ mã JavaScript vào ô nhập liệu, nếu server trả mã đó về cho trình duyệt khác mà không thoát ký tự đặc biệt thì mã đó sẽ chạy trong trình duyệt của người khác. Cách tránh: khi trả dữ liệu người dùng về dưới dạng HTML thì thoát ký tự đặc biệt, còn khi trả dưới dạng JSON cho API thì trình duyệt không chạy mã đó như HTML, nên API JSON an toàn hơn về XSS, nhưng vẫn phải cẩn thận khi hiển thị dữ liệu đó lên giao diện.
+
+
+---
+
+## Bài 51. Cơ sở dữ liệu nâng cao: pool, index, và hiệu năng truy vấn
+
+Bài này là phần nâng cao của Bài 30 và Bài 36, dành cho khi cơ sở dữ liệu bắt đầu chậm hoặc có nhiều người dùng cùng lúc.
+
+### Connection pool: hồ kết nối
+
+Mở một kết nối mới tới cơ sở dữ liệu mỗi lần cần là rất tốn thời gian. Connection pool là một hồ kết nối đã mở sẵn, mỗi lần cần thì lấy một kết nối từ hồ ra dùng, dùng xong thì trả lại hồ, không đóng hẳn.
+
+Với `database/sql`, cậu cấu hình hồ bằng các hàm sau, ngay sau khi mở `db`:
+
+```go
+db.SetMaxOpenConns(25)
+db.SetMaxIdleConns(5)
+db.SetConnMaxLifetime(5 * time.Minute)
+```
+
+- `SetMaxOpenConns`: số kết nối tối đa được mở cùng lúc, ví dụ 25. Vượt quá thì yêu cầu mới phải chờ.
+- `SetMaxIdleConns`: số kết nối giữ lại khi rảnh, để lần sau dùng ngay mà không cần mở lại.
+- `SetConnMaxLifetime`: thời gian sống tối đa của một kết nối, quá thời gian đó thì đóng và mở lại, để tránh kết nối cũ bị cơ sở dữ liệu cắt mà code không biết.
+
+### Index: mục lục của bảng
+
+Index giống như mục lục của sách: không có mục lục thì tìm một chương phải lật từng trang, có mục lục thì tra mục lục rồi nhảy thẳng tới trang đó. Trong cơ sở dữ liệu, index giúp tìm nhanh theo cột hay được tìm kiếm, ví dụ cột `ten` hay cột `user_id`, nhưng làm chậm việc chèn và cập nhật, vì mỗi lần chèn là phải cập nhật thêm mục lục.
+
+```sql
+CREATE INDEX idx_viec_user_id ON viec (user_id);
+```
+
+- Tạo index cho cột `user_id` thì câu truy vấn tìm việc theo `user_id` sẽ nhanh hơn nhiều khi bảng lớn.
+- Đừng tạo index cho mọi cột, chỉ tạo cho cột hay được dùng trong `WHERE` hoặc `JOIN`, và kiểm tra bằng `EXPLAIN` xem câu truy vấn có dùng index không trước khi kết luận.
+
+### EXPLAIN: xem cơ sở dữ liệu chạy câu truy vấn như thế nào
+
+Đặt `EXPLAIN` trước câu `SELECT` thì cơ sở dữ liệu sẽ in ra kế hoạch chạy câu đó, ví dụ có dùng index không, phải quét bao nhiêu dòng. Khi câu truy vấn chậm, bước đầu tiên là chạy `EXPLAIN`, không phải đoán mò rồi thêm index lung tung.
+
+---
+
+## Bài 52. Fuzzing và coverage: kiểm thử sâu hơn
+
+Bài này là phần nâng cao của Bài 25 và Bài 38, dành cho khi cậu muốn test chắc hơn nữa.
+
+### Fuzzing: máy tự nghĩ ra dữ liệu test
+
+Fuzzing là để máy tự sinh ra hàng nghìn dữ liệu đầu vào ngẫu nhiên, kể cả dữ liệu kỳ lạ mà cậu không nghĩ tới, rồi chạy hàm của cậu với từng dữ liệu đó để xem có bị panic hay sai không.
+
+Hàm fuzz trong Go bắt đầu bằng `Fuzz`, ví dụ test hàm đảo ngược chuỗi:
+
+```go
+func FuzzDaoChuoi(f *testing.F) {
+    f.Add("chao")
+    f.Add("Capybara")
+    f.Fuzz(func(t *testing.T, s string) {
+        dao := daoChuoi(s)
+        dao2 := daoChuoi(dao)
+        if dao2 != s {
+            t.Errorf("dao hai lan phai tra ve ban dau, duoc %q", dao2)
+        }
+    })
+}
+```
+
+- `f.Add(...)`: cho máy vài dữ liệu mẫu ban đầu, gọi là seed, để máy bắt đầu từ đó rồi biến đổi ra dữ liệu mới.
+- `f.Fuzz(...)`: hàm test thật, nhận dữ liệu ngẫu nhiên `s` do máy sinh ra, kiểm tra tính chất đúng của hàm, ở đây là đảo hai lần phải về ban đầu.
+- Chạy bằng `go test -fuzz=FuzzDaoChuoi`, máy sẽ chạy cho tới khi tìm ra dữ liệu làm hàm sai hoặc cậu dừng tay.
+
+### Coverage: test đã bao phủ bao nhiêu code
+
+Coverage là tỷ lệ code đã được test chạy qua. Chạy test với cờ `-cover` thì máy sẽ in ra tỷ lệ, ví dụ 80% nghĩa là 80% code đã được test chạy qua, 20% còn lại chưa có test nào chạy tới, có thể là nhánh lỗi chưa được test.
+
+```bash
+go test -cover ./...
+```
+
+Coverage cao thì tốt, nhưng coverage 100% không có nghĩa là code đúng hoàn toàn, vì test có thể chạy qua code mà không kiểm tra kết quả đúng hay sai. Vì vậy coverage chỉ là chỉ số tham khảo, không phải mục tiêu duy nhất.
+
+---
+
+## Bài 53. Tối ưu, build và cross-compile
+
+Bài này gom các việc hay làm khi chuẩn bị đưa chương trình lên thật, sau khi code đã đúng.
+
+### Cross-compile: build cho hệ điều hành khác
+
+Go build được cho hệ điều hành và kiến trúc khác với máy đang build, chỉ cần đặt hai biến môi trường:
+
+```bash
+GOOS=linux GOARCH=amd64 go build -o server-linux .
+GOOS=windows GOARCH=amd64 go build -o server.exe .
+GOOS=darwin GOARCH=arm64 go build -o server-mac .
+```
+
+- `GOOS` là hệ điều hành đích: `linux`, `windows`, `darwin` là macOS.
+- `GOARCH` là kiến trúc chip đích: `amd64` là chip Intel và AMD 64-bit, `arm64` là chip ARM 64-bit như Apple Silicon.
+- Nhờ cross-compile mà cậu ngồi trên máy Windows vẫn build được file chạy trên server Linux, không cần máy Linux riêng.
+
+### Ldflags: nhét thông tin vào binary và làm binary nhỏ hơn
+
+`ldflags` là cờ truyền cho linker, tức là bước cuối cùng khi build, để nhét thông tin vào binary hoặc làm binary nhỏ hơn:
+
+```bash
+go build -ldflags "-s -w -X main.version=v1.2.3" -o server .
+```
+
+- `-s -w`: bỏ bảng ký hiệu và thông tin debug ra khỏi binary, binary nhỏ hơn, nhưng sau này gỡ lỗi bằng binary đó sẽ khó hơn, nên chỉ dùng cho bản release, không dùng cho bản đang phát triển.
+- `-X main.version=v1.2.3`: gán giá trị `v1.2.3` vào biến `version` trong gói `main` lúc build, để chương trình in ra phiên bản của chính nó mà không cần ghi cứng phiên bản vào code.
+
+### Benchmark bộ nhớ
+
+Ngoài benchmark thời gian ở Bài 38, còn có benchmark bộ nhớ bằng cách chạy benchmark với cờ `-benchmem`, máy sẽ in thêm số lần cấp phát bộ nhớ và tổng số byte cấp phát. Hàm nào cấp phát nhiều lần trong vòng lặp thì sẽ chậm và tốn bộ nhớ, sửa bằng cách tái sử dụng bộ đệm hoặc dùng `strings.Builder` như Bài 46 thay vì nối chuỗi bằng `+` trong vòng lặp.
+
+---
+
+## Bài 54. Go workspaces và modules nâng cao
+
+Bài này là phần nâng cao của Bài 24, dành cho khi cậu làm nhiều module cùng lúc trong một project lớn.
+
+### Replace: dùng code local thay cho thư viện đã publish
+
+Trong `go.mod`, directive `replace` báo cho Go là: thay vì tải thư viện từ mạng về, hãy dùng code ở đường dẫn local này.
+
+```
+replace example.com/thu-vien => ../thu-vien-local
+```
+
+Dùng khi cậu đang sửa một thư viện và muốn test ngay với project chính mà không cần publish thư viện lên mạng trước. Nhớ xóa `replace` trước khi đưa lên thật, hoặc giữ lại chỉ khi có lý do rõ ràng, vì máy khác build sẽ không có đường dẫn local đó.
+
+### Workspaces: làm nhiều module cùng lúc
+
+Go workspace, từ Go 1.18 trở đi, cho phép cậu mở nhiều module trong cùng một workspace mà không cần `replace` từng module một.
+
+File `go.work` ở thư mục cha:
+
+```
+go 1.22
+
+use (
+    ./todo-api
+    ./thu-vien-chung
+)
+```
+
+- `use` liệt kê các module trong workspace.
+- Khi chạy `go build` trong workspace thì Go sẽ dùng code local của các module đó, thay vì tải từ mạng.
+- Workspace chỉ dùng lúc phát triển trên máy mình, không push file `go.work` lên cùng với code release, trừ khi cả nhóm đều dùng workspace đó.
+
+### Phiên bản và private modules
+
+- Thư viện Go đánh phiên bản bằng tag Git, ví dụ `v1.2.3`, và `go.mod` ghi phiên bản đó. Khi thư viện lên phiên bản lớn mới, ví dụ từ v1 lên v2, thì đường dẫn import cũng đổi, để code cũ và code mới không lẫn nhau.
+- Module private, tức là code trong công ty hoặc code riêng không publish công khai, thì cần cấu hình `GOPRIVATE` và xác thực Git để Go tải được, ở đây chỉ cần biết tên gọi, khi nào làm project công ty thì mới cấu hình sâu.
+
+---
+
+## Bài 55. Kiến trúc hệ thống: monolith, microservices và message queue
+
+Bài cuối cùng của giáo trình, không dạy code mới nhiều, mà dạy cách nghĩ về hệ thống lớn, để cậu chọn kiến trúc đúng cho project của mình.
+
+### Monolith và microservices
+
+- Monolith: toàn bộ hệ thống nằm trong một chương trình duy nhất, dễ phát triển lúc đầu, dễ test, dễ deploy, vì chỉ có một thứ để chạy. Nhược điểm là khi hệ thống lớn lên, một thay đổi nhỏ cũng phải deploy cả hệ thống, và một lỗi ở một phần có thể làm sập cả hệ thống.
+- Microservices: tách hệ thống thành nhiều service nhỏ, mỗi service làm một việc, nói chuyện với nhau qua HTTP hoặc gRPC hoặc message queue. Ưu điểm là mỗi service deploy riêng, lỗi ở một service không nhất thiết làm sập service khác. Nhược điểm là phức tạp hơn nhiều: phải lo xác thực giữa các service, theo dõi lỗi qua nhiều service, và deploy nhiều thứ cùng lúc.
+- Lời khuyên thực tế, được nhiều người làm Go đồng ý: bắt đầu bằng monolith có cấu trúc tốt, như Todo API ở Bài 41 với các lớp model, repo, service, handler đã tách rõ. Khi nào một phần thật sự cần tách ra vì tải lớn hoặc nhóm khác nhau phụ trách thì mới tách phần đó thành service riêng, đừng tách microservices ngay từ đầu khi chưa cần.
+
+### Message queue: hàng đợi tin nhắn
+
+Message queue là hàng đợi ở giữa hai service: service gửi tin nhắn vào hàng đợi rồi đi làm việc khác ngay, không cần chờ service nhận xử lý xong. Service nhận sẽ lấy tin nhắn từ hàng đợi ra xử lý khi rảnh.
+
+Các hệ thống message queue phổ biến: Kafka cho lượng tin nhắn rất lớn, RabbitMQ cho hàng đợi truyền thống, NATS cho nhẹ và nhanh trong hệ thống Go.
+
+Dùng message queue khi: việc đó không cần trả lời ngay, ví dụ gửi email sau khi đăng ký, xử lý ảnh sau khi tải lên, hoặc khi lượng yêu cầu tăng đột ngột mà service xử lý không kịp, hàng đợi sẽ giữ yêu cầu lại thay vì làm sập service.
+
+### Kết thúc giáo trình
+
+Tới đây là hết giáo trình Go trong file này: từ in một dòng chữ, biến, hàm, danh sách, struct, lỗi, goroutine, HTTP, cơ sở dữ liệu, cho tới Gin, JWT, Docker, Todo API, và kiến trúc hệ thống. Học tiếp sau giáo trình này không phải là học thêm bài mới trong file nữa, mà là làm project thật, gặp vấn đề thật, rồi quay lại tra cứu đúng bài trong file này hoặc đọc tài liệu chính chủ của thư viện đó.
+
+---
+
+## Phụ lục F. Mục lục đầy đủ giáo trình
+
+- Bài 1: In ra màn hình.
+- Bài 2: Biến.
+- Bài 3: Gán lại giá trị.
+- Bài 4: Phép tính với số.
+- Bài 5: If và Else.
+- Bài 6: For.
+- Bài 7: Hàm có tham số.
+- Bài 8: Hàm trả về.
+- Bài 9: Chuỗi.
+- Bài 10: Nhập dữ liệu.
+- Bài 11: Danh sách slice và map.
+- Bài 12: Struct.
+- Bài 13: Con trỏ.
+- Bài 14: Xử lý lỗi.
+- Bài 15: Goroutine, Channel, WaitGroup.
+- Bài 16: HTTP Server.
+- Bài 17: Tổ chức project và học tiếp.
+- Bài 18: Switch.
+- Bài 19: Hằng số, Bool, Số thực và ép kiểu.
+- Bài 20: Interface.
+- Bài 21: Generics.
+- Bài 22: Đọc và ghi file.
+- Bài 23: JSON.
+- Bài 24: Go mod và nhiều file, nhiều gói.
+- Bài 25: Kiểm thử.
+- Bài 26: Context.
+- Bài 27: Mutex.
+- Bài 28: Defer, Panic, Recover.
+- Bài 29: Gói lỗi.
+- Bài 30: Cơ sở dữ liệu và CRUD.
+- Bài 31: Thời gian, sắp xếp và biểu thức chính quy.
+- Bài 32: Mẫu chạy song song nâng cao.
+- Bài 33: Web với Gin.
+- Bài 34: Băm mật khẩu và JWT.
+- Bài 35: Middleware xác thực và phân quyền.
+- Bài 36: Transaction và Migration.
+- Bài 37: ORM và sqlx.
+- Bài 38: Kiểm thử nâng cao.
+- Bài 39: Profiling, log và cấu hình.
+- Bài 40: Docker cho Go.
+- Bài 41: Project mẫu Todo API có đăng nhập.
+- Bài 42: Lộ trình học dần sau 30 bài.
+- Bài 43: Hàm nâng cao.
+- Bài 44: Struct nâng cao.
+- Bài 45: Slice và Map nâng cao.
+- Bài 46: Chuỗi nâng cao, rune và unicode.
+- Bài 47: HTTP Client.
+- Bài 48: TCP, UDP, WebSocket và gRPC.
+- Bài 49: Viết CLI.
+- Bài 50: Bảo mật web.
+- Bài 51: Cơ sở dữ liệu nâng cao.
+- Bài 52: Fuzzing và coverage.
+- Bài 53: Tối ưu, build và cross-compile.
+- Bài 54: Go workspaces và modules nâng cao.
+- Bài 55: Kiến trúc hệ thống.
+
+---
+
+*Giáo trình Go đầy đủ: 55 bài và 6 phụ lục, viết trong cùng 1 file, học dần từng bài một, làm project thật rồi quay lại tra cứu khi cần.*
