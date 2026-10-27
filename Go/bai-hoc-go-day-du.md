@@ -1202,3 +1202,803 @@ Mỗi từ chỉ dịch một nghĩa dùng trong bài này, đủ để cậu đ
 ---
 
 *Viết cho Hoàng Dươngg, học chậm mà chắc, mỗi bài một khái niệm, bóc từng dòng rồi mới sang bài tiếp theo.*
+
+---
+
+## Phần bổ sung: các bài nâng cao viết đầy đủ
+
+Phần này viết tiếp theo yêu cầu của Hoàng Dươngg: viết hết, đầy đủ, giải thích chi tiết, dễ hiểu. Mỗi bài dưới đây vẫn giữ nguyên nhịp: một khái niệm mới là chính, dịch từ tiếng Anh, bóc từng dòng, có kết quả chạy, nói rõ phần nào tự đổi được.
+
+---
+
+## Bài 18. Switch: rẽ nhánh theo nhiều giá trị
+
+Khái niệm mới duy nhất: `switch`, xét một giá trị với nhiều trường hợp, gọn hơn viết nhiều `if else if`.
+
+Từ tiếng Anh:
+
+- `switch` = chuyển, chuyển theo.
+- `case` = trường hợp.
+- `default` = mặc định, trường hợp còn lại.
+
+Code:
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    thu := 3
+    switch thu {
+    case 2:
+        fmt.Println("Thu hai")
+    case 3:
+        fmt.Println("Thu ba")
+    default:
+        fmt.Println("Ngay khac")
+    }
+}
+```
+
+Bóc:
+
+- `switch thu`: lấy giá trị trong hộp `thu` ra để so sánh.
+- `case 2:`: nếu `thu` bằng 2 thì chạy dòng dưới nó.
+- `case 3:`: nếu `thu` bằng 3 thì chạy dòng dưới nó. Ở đây `thu` là 3 nên in ra `Thu ba`.
+- `default:`: nếu không khớp trường hợp nào thì chạy ở đây.
+- Khác với nhiều ngôn ngữ khác, Go không cần viết `break` sau mỗi `case`. Chạy xong một `case` là tự dừng, không chạy tràn sang `case` sau. Muốn chạy tràn cố tình thì mới dùng từ khóa `fallthrough`, rất hiếm khi cần, ở đây không cần nhớ vội.
+
+Kết quả:
+
+```
+Thu ba
+Program exited.
+```
+
+Dạng `switch` không có giá trị, tương đương viết nhiều `if`:
+
+```go
+diem := 8
+switch {
+case diem >= 9:
+    fmt.Println("Gioi!")
+case diem >= 5:
+    fmt.Println("Dat")
+default:
+    fmt.Println("Chua dat")
+}
+```
+
+Ở dạng này, mỗi `case` là một điều kiện, máy xét từ trên xuống dưới, gặp điều kiện đúng đầu tiên thì chạy rồi dừng.
+
+Tự đổi được: giá trị `thu`, các số trong `case`, câu in ra.
+Bắt buộc: dấu `:` sau mỗi `case`, từ `default` nếu muốn có trường hợp còn lại.
+
+---
+
+## Bài 19. Hằng số, Bool, Số thực và ép kiểu
+
+Bài này gom các kiểu dữ liệu cơ bản còn lại, mỗi kiểu chỉ một ví dụ ngắn, để cậu tra cứu khi gặp.
+
+### Hằng số
+
+Từ tiếng Anh: `const` = viết tắt của `constant` = hằng số, không đổi được.
+
+```go
+const PI = 3.14
+fmt.Println(PI)
+```
+
+Khai báo bằng `const` thì sau đó không được gán lại. Viết `PI = 3.15` sau đó là lỗi. Biến thì đổi được, hằng thì không.
+
+### Bool
+
+`bool` là kiểu đúng hoặc sai, chỉ có hai giá trị: `true` (đúng) và `false` (sai).
+
+```go
+dangHoc := true
+if dangHoc {
+    fmt.Println("Dang hoc Go")
+}
+```
+
+`if` nhận trực tiếp một giá trị `bool`, không cần viết `dangHoc == true`, vì bản thân nó đã là đúng hoặc sai rồi.
+
+### Số thực float64
+
+`float64` là số có phần thập phân, ví dụ 3.14, 2.5, -0.5. Số 64 là độ chính xác, ở đây không cần đào sâu, chỉ cần biết tên gọi.
+
+```go
+a := 7.0
+b := 2.0
+fmt.Println(a / b) // 3.5
+```
+
+Chú ý: `7 / 2` với `int` ra 3, nhưng `7.0 / 2.0` với `float64` ra 3.5. Kiểu quyết định kết quả chia.
+
+### Ép kiểu
+
+Ép kiểu là đổi một giá trị từ kiểu này sang kiểu khác, viết tên kiểu trước rồi bao giá trị trong ngoặc tròn:
+
+```go
+x := 7
+y := 2
+fmt.Println(float64(x) / float64(y)) // 3.5
+fmt.Println(int(3.9)) // 3
+```
+
+- `float64(x)` đổi số nguyên 7 thành số thực 7.0.
+- `int(3.9)` đổi số thực 3.9 thành số nguyên 3, bỏ phần thập phân đi, không làm tròn lên.
+
+Lỗi hay gặp: cộng `int` với `float64` trực tiếp mà không ép kiểu, máy sẽ báo kiểu không khớp. Phải ép một bên về cùng kiểu với bên còn lại trước.
+
+---
+
+## Bài 20. Interface: hợp đồng chung
+
+Khái niệm mới duy nhất: `interface`, tức là một hợp đồng: kiểu nào có đủ các hàm trong hợp đồng thì đều dùng được chung một chỗ.
+
+Từ tiếng Anh: `interface` = giao diện, hợp đồng.
+
+Ví dụ đời thường: ổ cắm điện là một hợp đồng. Quạt, đèn, sạc điện thoại đều cắm được vào cùng một ổ, vì chúng đều có chung một chuẩn cắm, dù bên trong mỗi thứ hoạt động khác nhau.
+
+Code:
+
+```go
+package main
+
+import "fmt"
+
+type Keu interface {
+    KeuLen() string
+}
+
+type Cho struct {
+    Ten string
+}
+
+func (c Cho) KeuLen() string {
+    return c.Ten + " gau gau"
+}
+
+type Meo struct {
+    Ten string
+}
+
+func (m Meo) KeuLen() string {
+    return m.Ten + " meo meo"
+}
+
+func choKeu(k Keu) {
+    fmt.Println(k.KeuLen())
+}
+
+func main() {
+    choKeu(Cho{Ten: "Vang"})
+    choKeu(Meo{Ten: "Mun"})
+}
+```
+
+Bóc, chậm từng bước:
+
+- `type Keu interface { KeuLen() string }`: định nghĩa hợp đồng tên `Keu`, hợp đồng này chỉ yêu cầu một điều: phải có hàm `KeuLen()` trả về chuỗi.
+- `Cho` và `Meo` là hai struct khác nhau, nhưng cả hai đều có hàm `KeuLen()` đúng chữ ký như hợp đồng, nên cả hai đều tự động thỏa hợp đồng `Keu`, không cần khai báo thêm là "tôi implements interface này".
+- `func choKeu(k Keu)`: hàm này nhận bất cứ giá trị nào thỏa hợp đồng `Keu`, không quan tâm nó là chó hay mèo, chỉ cần nó biết kêu lên.
+- Gọi `choKeu` với chó thì in ra chó kêu, gọi với mèo thì in ra mèo kêu, cùng một hàm, hai kiểu khác nhau.
+
+Kết quả:
+
+```
+Vang gau gau
+Mun meo meo
+Program exited.
+```
+
+Interface rỗng, `any`, là hợp đồng không yêu cầu gì cả, nên kiểu nào cũng thỏa:
+
+```go
+func inBatCu(x any) {
+    fmt.Println(x)
+}
+```
+
+`any` là tên mới của `interface{}`. Dùng khi thật sự cần nhận bất cứ kiểu gì, nhưng dùng nhiều quá thì mất kiểm tra kiểu, nên chỉ dùng khi cần thiết.
+
+Tự đổi được: tên interface, tên struct, tên hàm trong hợp đồng, miễn là ba chỗ phải khớp nhau: định nghĩa hợp đồng, hàm của struct, và chỗ gọi.
+Bắt buộc: chữ ký hàm trong struct phải giống hệt chữ ký trong hợp đồng, cả tên hàm, tham số và kiểu trả về.
+
+---
+
+## Bài 21. Generics: hàm dùng được nhiều kiểu
+
+Khái niệm mới duy nhất: generics, viết một hàm mà dùng được cho nhiều kiểu, thay vì viết lại hàm giống nhau cho từng kiểu.
+
+Từ tiếng Anh: `generic` = chung chung, dùng chung cho nhiều kiểu.
+
+Vấn đề trước khi có generics: muốn cộng hai số nguyên thì viết hàm cho `int`, muốn cộng hai số thực thì phải viết lại hàm y hệt cho `float64`, rất lặp lại.
+
+Code:
+
+```go
+package main
+
+import "fmt"
+
+func cong[T int | float64](a, b T) T {
+    return a + b
+}
+
+func main() {
+    fmt.Println(cong(3, 4))       // 7
+    fmt.Println(cong(2.5, 3.5))   // 6
+}
+```
+
+Bóc:
+
+- `[T int | float64]`: khai báo một kiểu chung tên `T`, `T` tự đặt, giống như tên tham số. Dấu `|` nghĩa là "hoặc": `T` có thể là `int` hoặc `float64`.
+- `(a, b T)`: cả hai tham số đều kiểu `T`, tức là cùng một kiểu trong một lần gọi, không được một bên `int` một bên `float64` trong cùng một lần gọi.
+- `T` ở sau dấu `)` là kiểu trả về, cũng là `T`, tức là trả về cùng kiểu với đầu vào.
+- Gọi `cong(3, 4)`: máy tự hiểu `T` là `int`, trả về `int` là 7.
+- Gọi `cong(2.5, 3.5)`: máy tự hiểu `T` là `float64`, trả về `float64` là 6.
+
+Kết quả:
+
+```
+7
+6
+Program exited.
+```
+
+Generics cũng dùng được cho struct và danh sách, ví dụ một hộp đựng bất cứ kiểu gì:
+
+```go
+type Hop[T any] struct {
+    GiaTri T
+}
+```
+
+Ở đây `Hop[int]` là hộp đựng số nguyên, `Hop[string]` là hộp đựng chuỗi, cùng một định nghĩa mà dùng được nhiều kiểu.
+
+Lời khuyên: ở giai đoạn này chỉ cần hiểu generics là "viết một lần, dùng nhiều kiểu", đừng cố dùng generics cho mọi hàm. Hàm chỉ dùng một kiểu thì viết bình thường cho dễ đọc, khi nào thấy mình viết lại cùng một hàm cho nhiều kiểu thì mới nghĩ tới generics.
+
+
+---
+
+## Bài 22. Đọc và ghi file
+
+Khái niệm mới duy nhất: chương trình đọc và ghi file trên máy, thay vì chỉ in ra màn hình và biến mất khi tắt chương trình.
+
+Từ tiếng Anh:
+
+- `os` = operating system, hệ điều hành, gói làm việc với file và hệ thống.
+- `ReadFile` = đọc file.
+- `WriteFile` = ghi file.
+
+Code ghi rồi đọc lại:
+
+```go
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    noiDung := "Xin chao Capybara"
+    err := os.WriteFile("chao.txt", []byte(noiDung), 0644)
+    if err != nil {
+        fmt.Println("Loi ghi:", err)
+        return
+    }
+
+    doc, err := os.ReadFile("chao.txt")
+    if err != nil {
+        fmt.Println("Loi doc:", err)
+        return
+    }
+    fmt.Println(string(doc))
+}
+```
+
+Bóc:
+
+- `os.WriteFile("chao.txt", []byte(noiDung), 0644)`: ghi vào file tên `chao.txt`. Tham số thứ hai là nội dung, phải đổi chuỗi thành danh sách byte bằng `[]byte(...)`, vì file lưu theo byte, không lưu trực tiếp theo chuỗi. Tham số thứ ba `0644` là quyền của file, ở đây chỉ cần nhớ số này là quyền đọc ghi bình thường, chưa cần học sâu về quyền file.
+- `err := os.WriteFile(...)`: hàm ghi file trả về lỗi, nếu ghi được thì lỗi là `nil`, nếu không ghi được thì lỗi khác `nil`. Kiểm tra lỗi ngay sau đó, giống Bài 14.
+- `return` trong `main` ở đây là dừng chương trình luôn, vì ghi lỗi thì đọc tiếp cũng vô nghĩa.
+- `os.ReadFile("chao.txt")`: đọc toàn bộ file về, trả về danh sách byte và lỗi.
+- `string(doc)`: đổi danh sách byte đọc được trở lại thành chuỗi để in ra.
+
+Kết quả nếu chạy trên máy thật:
+
+```
+Xin chao Capybara
+```
+
+Chú ý về Go Playground: Playground không có file thật trên máy cậu để ghi và đọc như trên, nên bài này đọc hiểu trước, chạy thật trên máy có cài Go hoặc Termux sau. Đường dẫn file ở ví dụ trên là đường dẫn tương đối, tức là file nằm cùng thư mục với chương trình đang chạy.
+
+Đọc từng dòng với `bufio`, dùng khi file lớn, không muốn đọc hết một lần vào bộ nhớ:
+
+```go
+file, err := os.Open("chao.txt")
+if err != nil {
+    fmt.Println("Loi mo:", err)
+    return
+}
+defer file.Close()
+```
+
+- `os.Open` mở file để đọc, khác `ReadFile` là đọc hết một lần.
+- `defer file.Close()`: `defer` nghĩa là hoãn lại, câu này sẽ chạy khi hàm kết thúc, ở đây là đóng file lại khi đọc xong, để không bị rò rỉ file mở. Quên đóng file thì lâu dài máy sẽ hết chỗ mở file.
+
+---
+
+## Bài 23. JSON: định dạng trao đổi dữ liệu
+
+Khái niệm mới duy nhất: JSON, định dạng chữ để chương trình này gửi dữ liệu cho chương trình khác, đặc biệt là cho API và web.
+
+Từ tiếng Anh: `JSON` = JavaScript Object Notation, ký hiệu đối tượng của JavaScript, nhưng nay mọi ngôn ngữ đều dùng.
+
+Ví dụ một giá trị JSON:
+
+```json
+{"ten": "Duongg", "tuoi": 18}
+```
+
+Trong Go, struct và JSON đi với nhau bằng thẻ `json`:
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+)
+
+type Nguoi struct {
+    Ten  string `json:"ten"`
+    Tuoi int    `json:"tuoi"`
+}
+
+func main() {
+    d := Nguoi{Ten: "Duongg", Tuoi: 18}
+
+    chuoi, err := json.Marshal(d)
+    if err != nil {
+        fmt.Println("Loi:", err)
+        return
+    }
+    fmt.Println(string(chuoi))
+
+    var d2 Nguoi
+    err = json.Unmarshal([]byte(`{"ten": "Capybara", "tuoi": 3}`), &d2)
+    if err != nil {
+        fmt.Println("Loi:", err)
+        return
+    }
+    fmt.Println(d2.Ten, d2.Tuoi)
+}
+```
+
+Bóc:
+
+- `` `json:"ten"` `` là thẻ, viết trong dấu backtick, ngay sau kiểu của trường. Thẻ này báo: khi đổi sang JSON thì trường `Ten` sẽ thành khóa `"ten"` viết thường, không phải `"Ten"`.
+- `json.Marshal(d)`: `Marshal` nghĩa là đóng gói, đổi struct thành danh sách byte JSON.
+- `string(chuoi)`: đổi danh sách byte JSON thành chuỗi để in ra.
+- `json.Unmarshal(...)`: `Unmarshal` nghĩa là mở gói, đổi JSON thành struct. Tham số thứ hai phải là địa chỉ của hộp nhận, nên viết `&d2`, giống dấu `&` trong `Scanln`.
+- Dấu backtick quanh chuỗi JSON ở ví dụ là chuỗi thô, trong đó dấu ngoặc kép không cần thoát, dùng cho tiện khi viết JSON mẫu trong code.
+
+Kết quả:
+
+```
+{"ten":"Duongg","tuoi":18}
+Capybara 3
+Program exited.
+```
+
+Chú ý: trường trong struct muốn xuất ra JSON thì tên trường phải viết hoa chữ đầu, ví dụ `Ten`, `Tuoi`. Viết thường `ten`, `tuoi` thì gói `json` sẽ không nhìn thấy trường đó và bỏ qua.
+
+---
+
+## Bài 24. Go mod và nhiều file, nhiều gói
+
+Bài này không có code chạy mới phức tạp, mà là cách xếp project cho đúng, để cậu không bị rối khi project lớn lên.
+
+- `go mod init ten-module`: lệnh tạo file `go.mod`, khai báo tên module của project. Ví dụ trong thư mục project, chạy `go mod init vidu` thì tạo ra file `go.mod` ghi tên module là `vidu`.
+- File `go.mod` còn ghi phiên bản Go và thư viện ngoài project đang dùng. Khi cậu dùng thư viện ngoài, chạy `go get ten-thu-vien` thì `go.mod` tự cập nhật.
+- Một project có nhiều file `.go` cùng một thư mục thì các file đó phải cùng một `package`, trừ file `main.go` thuộc `package main`. Các hàm ở file này gọi được hàm ở file khác cùng gói mà không cần import thêm, vì chúng cùng một gói.
+- Muốn dùng gói khác trong cùng project thì `import` theo đường dẫn module, ví dụ `import "vidu/tinh"`, trong đó `vidu` là tên module, `tinh` là tên thư mục gói.
+- Quy tắc tên: tên hàm, tên kiểu, tên trường viết hoa chữ đầu thì gói khác dùng được, gọi là exported, xuất ra ngoài. Viết thường chữ đầu thì chỉ dùng trong cùng gói, gọi là unexported. Giống như trường `Ten` xuất được ra JSON, trường `ten` thì không, cùng một nguyên tắc: hoa là mở, thường là đóng.
+- Cấu trúc project nhỏ gợi ý:
+
+```
+myapp/
+  go.mod
+  main.go
+  tinh/
+    tong.go
+```
+
+Trong đó `main.go` thuộc `package main`, gọi hàm trong gói `tinh`, còn `tong.go` thuộc `package tinh`.
+
+Lỗi hay gặp: hai file cùng thư mục mà khai báo `package` khác nhau, máy sẽ báo gói không khớp. Sửa bằng cách cho cùng một `package` hoặc tách thư mục ra.
+
+---
+
+## Bài 25. Kiểm thử: go test
+
+Khái niệm mới duy nhất: test, viết chương trình kiểm tra chương trình của mình, thay vì chỉ nhìn bằng mắt.
+
+Từ tiếng Anh: `test` = kiểm tra, thử.
+
+File code chính, ví dụ `tong.go`:
+
+```go
+package tinh
+
+func Tong(a, b int) int {
+    return a + b
+}
+```
+
+File test, tên phải kết thúc bằng `_test.go`, ví dụ `tong_test.go`, cùng thư mục, cùng gói:
+
+```go
+package tinh
+
+import "testing"
+
+func TestTong(t *testing.T) {
+    ketQua := Tong(3, 4)
+    if ketQua != 7 {
+        t.Errorf("Tong(3, 4) = %d, muon 7", ketQua)
+    }
+}
+```
+
+Bóc:
+
+- `import "testing"`: mượn gói kiểm thử có sẵn của Go.
+- `func TestTong(t *testing.T)`: hàm test phải bắt đầu bằng `Test`, chữ `T` viết hoa, tham số là `*testing.T`, tức là địa chỉ của đối tượng kiểm thử.
+- `t.Errorf(...)`: báo test thất bại, in ra thông báo. `%d` là chỗ để điền số nguyên vào, giống như in có định dạng.
+- Chạy test bằng lệnh `go test ./...` trong thư mục project, dấu `./...` nghĩa là test tất cả các gói trong project.
+- Kết quả khi đúng: `ok`, khi sai: `FAIL` kèm thông báo cậu viết trong `Errorf`.
+
+Lợi ích: sau này cậu sửa code, chỉ cần chạy lại `go test` là biết ngay chỗ nào bị hỏng, không cần chạy tay từng ví dụ một. Test tốt nhất là test các trường hợp biên: số 0, số âm, số lớn, và trường hợp lỗi như chia cho 0.
+
+Bảng test, viết gọn nhiều trường hợp trong một hàm test, học sau dạng test đơn cũng được:
+
+```go
+func TestTongBang(t *testing.T) {
+    cacTruongHop := []struct {
+        a, b, muon int
+    }{
+        {3, 4, 7},
+        {0, 0, 0},
+        {-1, 1, 0},
+    }
+    for _, tc := range cacTruongHop {
+        ketQua := Tong(tc.a, tc.b)
+        if ketQua != tc.muon {
+            t.Errorf("Tong(%d, %d) = %d, muon %d", tc.a, tc.b, ketQua, tc.muon)
+        }
+    }
+}
+```
+
+Ở đây `_, tc := range ...`: dấu `_` bỏ qua chỉ số, chỉ lấy giá trị từng trường hợp, giống dấu `_` bỏ qua giá trị không cần ở Bài 14.
+
+
+---
+
+## Bài 26. Context: hủy việc và giới hạn thời gian
+
+Khái niệm mới duy nhất: `context`, tức là bối cảnh của một việc, dùng để báo hủy hoặc giới hạn thời gian cho việc đó.
+
+Từ tiếng Anh: `context` = bối cảnh, ngữ cảnh.
+
+Ví dụ đời thường: cậu nhờ bạn đi mua đồ, nhưng dặn trước là "quá 10 phút mà chưa mua được thì thôi, quay về". Cái dặn đó chính là context có thời hạn.
+
+Code:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+)
+
+func lamViec(ctx context.Context) {
+    select {
+    case <-time.After(2 * time.Second):
+        fmt.Println("Lam xong")
+    case <-ctx.Done():
+        fmt.Println("Bi huy:", ctx.Err())
+    }
+}
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+    defer cancel()
+    lamViec(ctx)
+}
+```
+
+Bóc, chậm từng phần:
+
+- `context.Background()`: bối cảnh gốc, trống, không có thời hạn, không có hủy. Đây là điểm bắt đầu, thường dùng ở `main`.
+- `context.WithTimeout(..., 1*time.Second)`: tạo bối cảnh mới có thời hạn 1 giây, dựa trên bối cảnh gốc. Trả về hai thứ: bối cảnh mới `ctx`, và hàm hủy `cancel`.
+- `defer cancel()`: hoãn việc gọi `cancel` tới khi hàm `main` kết thúc, để giải phóng tài nguyên, dù việc đã xong hay đã hết hạn.
+- `ctx.Done()`: một kênh, khi bối cảnh bị hủy hoặc hết hạn thì kênh này sẽ đóng lại, bên nhận sẽ biết là phải dừng.
+- `select`: chọn nhánh nào sẵn sàng trước thì chạy nhánh đó, giống như đứng ở ngã ba, đường nào mở trước thì đi đường đó.
+- Ở ví dụ này, việc cần 2 giây mới xong, nhưng thời hạn chỉ 1 giây, nên nhánh `ctx.Done()` thắng trước, in ra bị hủy, không chờ tới 2 giây.
+
+Kết quả:
+
+```
+Bi huy: context deadline exceeded
+Program exited.
+```
+
+`context deadline exceeded` nghĩa là đã quá thời hạn.
+
+Các dạng context thường dùng:
+
+- `context.Background()`: bối cảnh gốc ở `main` hoặc ở test.
+- `context.TODO()`: bối cảnh tạm, dùng khi chưa biết dùng bối cảnh nào, sau này thay bằng bối cảnh thật.
+- `context.WithCancel`: tạo bối cảnh có thể hủy bằng tay bằng hàm `cancel`, không có thời hạn tự động.
+- `context.WithTimeout`: tạo bối cảnh có thời hạn, hết hạn thì tự hủy.
+- `context.WithValue`: gắn thêm một giá trị vào bối cảnh, ví dụ mã người dùng, để hàm sâu bên trong lấy ra dùng mà không cần truyền thêm tham số.
+
+Quy tắc quan trọng: `context.Context` luôn là tham số đầu tiên của hàm, không bao giờ cất nó vào struct. Truyền context từ trên xuống dưới, hàm nào nhận được thì truyền tiếp xuống hàm con.
+
+---
+
+## Bài 27. Mutex: khóa để không sửa cùng lúc
+
+Khái niệm mới duy nhất: `mutex`, tức là khóa, để hai goroutine không sửa cùng một hộp cùng lúc.
+
+Từ tiếng Anh: `mutex` = viết tắt của `mutual exclusion` = loại trừ lẫn nhau, chỉ một người được vào một lúc.
+
+Ví dụ đời thường: một nhà vệ sinh chỉ có một người vào được một lúc, người vào thì khóa cửa lại, ra thì mở cửa cho người tiếp theo. Mutex cũng vậy, chỉ một goroutine được giữ khóa một lúc.
+
+Code:
+
+```go
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func main() {
+    var mu sync.Mutex
+    dem := 0
+
+    var wg sync.WaitGroup
+    for i := 0; i < 1000; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            mu.Lock()
+            dem = dem + 1
+            mu.Unlock()
+        }()
+    }
+    wg.Wait()
+    fmt.Println(dem)
+}
+```
+
+Bóc:
+
+- `var mu sync.Mutex`: tạo một cái khóa tên `mu`.
+- `mu.Lock()`: khóa lại, goroutine nào tới trước thì giữ khóa, goroutine tới sau phải đứng chờ ở dòng này cho tới khi khóa được mở.
+- `dem = dem + 1`: đoạn này nằm giữa khóa và mở khóa, gọi là đoạn quan trọng, chỉ một goroutine được chạy đoạn này một lúc, nên `dem` không bị hai goroutine đọc và ghi đè lên nhau.
+- `mu.Unlock()`: mở khóa ra, cho goroutine tiếp theo vào.
+- Nếu không có khóa, 1000 goroutine cùng tăng `dem` thì kết quả có thể nhỏ hơn 1000, vì hai goroutine có thể cùng đọc `dem` là 500, cùng cộng 1 thành 501, rồi cùng ghi 501, mất mất một lần tăng. Đây gọi là race condition, điều kiện đua nhau.
+- `go func() { ... }()`: đây là hàm ẩn danh chạy ngay dưới dạng goroutine, tức là định nghĩa hàm và gọi nó ngay trong cùng một dòng, không cần đặt tên hàm riêng.
+
+Kết quả đúng khi có khóa:
+
+```
+1000
+Program exited.
+```
+
+Cách kiểm tra race: chạy test với lệnh `go test -race ./...`, máy sẽ báo chỗ nào có race, để cậu sửa bằng mutex hoặc bằng channel.
+
+Một lựa chọn khác: thay vì dùng mutex để bảo vệ hộp chung, có thể dùng channel để chỉ một goroutine duy nhất được phép sửa hộp đó, các goroutine khác gửi yêu cầu qua channel. Nguyên tắc của Go là: đừng giao tiếp bằng cách chia sẻ bộ nhớ, hãy chia sẻ bộ nhớ bằng cách giao tiếp. Ở giai đoạn này chỉ cần nhớ câu đó, chưa cần áp dụng hoàn hảo.
+
+---
+
+## Bài 28. Defer, Panic, Recover
+
+Ba từ này đi chung với nhau, nhưng mỗi từ là một khái niệm nhỏ, học chung một bài cho tiện.
+
+### Defer
+
+`defer` nghĩa là hoãn lại, câu lệnh có `defer` sẽ chạy khi hàm kết thúc, dù hàm kết thúc bình thường hay vì lỗi.
+
+```go
+func main() {
+    defer fmt.Println("Chay cuoi cung")
+    fmt.Println("Chay dau tien")
+}
+```
+
+Kết quả in ra ngược thứ tự viết: `Chay dau tien` trước, `Chay cuoi cung` sau, vì câu có `defer` bị hoãn tới cuối hàm.
+
+Dùng nhiều nhất cho: đóng file sau khi mở, mở khóa mutex sau khi khóa, gọi `cancel` của context sau khi tạo, báo `Done` của WaitGroup sau khi bắt đầu việc.
+
+Nếu có nhiều `defer` trong một hàm thì chúng chạy theo thứ tự ngược lại, cái `defer` sau cùng chạy trước, giống như xếp chồng đĩa, lấy đĩa trên cùng trước.
+
+### Panic
+
+`panic` nghĩa là hoảng loạn, chương trình gặp lỗi không thể tiếp tục được thì tự dừng và in ra lỗi.
+
+```go
+panic("co loi nghiem trong")
+```
+
+Ví dụ hay gặp nhất: truy cập danh sách vượt chỉ số, ví dụ `tenList[10]` khi danh sách chỉ có 3 món, máy sẽ tự `panic` và dừng chương trình.
+
+### Recover
+
+`recover` nghĩa là hồi phục, bắt lại cơn `panic` để chương trình không chết hẳn, chỉ dùng trong hàm có `defer`.
+
+```go
+func anToan() {
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("Bat duoc panic:", r)
+        }
+    }()
+    panic("co loi")
+    fmt.Println("Dong nay khong chay")
+}
+```
+
+Bóc:
+
+- Hàm ẩn danh có `defer` sẽ chạy khi hàm `anToan` kết thúc, kể cả khi đang `panic`.
+- Trong hàm `defer` đó, `recover()` lấy lại giá trị `panic` đã ném ra. Nếu không có `panic` thì `recover()` trả về `nil`.
+- Nếu bắt được `panic` thì chương trình không chết, chỉ in ra thông báo rồi tiếp tục ở hàm gọi.
+
+Quy tắc: đừng dùng `panic` thay cho lỗi bình thường. Lỗi bình thường thì trả về `error` như Bài 14, chỉ `panic` khi lỗi thật sự không thể tiếp tục được, ví dụ cấu hình sai ngay từ đầu.
+
+---
+
+## Bài 29. Gói lỗi: bọc lỗi và kiểm tra lỗi
+
+Bài này là phần nâng cao của Bài 14, học sau khi đã quen với `error` cơ bản.
+
+### Bọc lỗi bằng fmt.Errorf và %w
+
+`fmt.Errorf` giống `fmt.Println` nhưng tạo ra một lỗi, không in ra. `%w` là chỗ để bọc một lỗi khác vào trong lỗi mới, giữ lại lỗi gốc để sau này kiểm tra được.
+
+```go
+import "fmt"
+
+func docFile() error {
+    _, err := os.ReadFile("khong-co.txt")
+    if err != nil {
+        return fmt.Errorf("khong doc duoc file: %w", err)
+    }
+    return nil
+}
+```
+
+Khi in lỗi này ra, cậu sẽ thấy cả hai lớp: lỗi ngoài là "không đọc được file", lỗi trong là lỗi gốc của hệ điều hành, ví dụ file không tồn tại.
+
+### Kiểm tra lỗi bằng errors.Is và errors.As
+
+- `errors.Is(err, loiMucTieu)`: kiểm tra xem lỗi này, hoặc lỗi được bọc trong nó, có phải là lỗi mục tiêu không. Dùng khi cậu muốn biết lỗi có phải là một loại cụ thể không, ví dụ file không tồn tại.
+- `errors.As(err, &loiCuThe)`: lấy lỗi cụ thể ra khỏi lớp bọc, để đọc thêm thông tin trong lỗi đó.
+
+```go
+import "errors"
+
+if errors.Is(err, os.ErrNotExist) {
+    fmt.Println("File khong ton tai")
+}
+```
+
+`os.ErrNotExist` là lỗi mẫu của hệ điều hành cho trường hợp file không tồn tại. Dùng `errors.Is` thì dù lỗi đã bị bọc nhiều lớp bằng `%w`, cậu vẫn kiểm tra được đúng loại.
+
+---
+
+## Bài 30. Cơ sở dữ liệu: khái niệm và CRUD
+
+Bài này giải thích khái niệm trước, code minh họa bằng bộ nhớ trước, rồi mới tới cơ sở dữ liệu thật, để cậu không bị ngợp bởi driver và câu lệnh SQL cùng lúc.
+
+### CRUD là gì
+
+CRUD là bốn việc cơ bản với dữ liệu, viết tắt của bốn từ tiếng Anh:
+
+- `Create` = tạo mới.
+- `Read` = đọc ra.
+- `Update` = cập nhật.
+- `Delete` = xóa đi.
+
+Mọi ứng dụng quản lý danh sách, từ danh sách việc cần làm tới danh sách người dùng, đều xoay quanh bốn việc này.
+
+### CRUD bằng danh sách trong bộ nhớ, qua HTTP
+
+Đây là project nhỏ gợi ý ở Bài 17, dùng lại struct, slice, HTTP server và JSON, không cần cơ sở dữ liệu thật mà vẫn chạy được:
+
+```go
+type Viec struct {
+    ID    int    `json:"id"`
+    Ten   string `json:"ten"`
+    Xong  bool   `json:"xong"`
+}
+
+var danhSach []Viec
+var idTiepTheo = 1
+```
+
+- Create: nhận JSON từ trình duyệt, tạo một `Viec` mới, gán `ID` tăng dần, `append` vào danh sách.
+- Read: trả danh sách về dưới dạng JSON, hoặc trả một việc theo `ID`.
+- Update: tìm việc theo `ID`, đổi trường `Ten` hoặc `Xong` rồi ghi lại vào danh sách.
+- Delete: tìm việc theo `ID`, xóa khỏi danh sách bằng cách cắt slice: `danhSach = append(danhSach[:i], danhSach[i+1:]...)`.
+
+Dấu `...` ở cuối trong ví dụ xóa nghĩa là "trải danh sách ra thành từng món riêng", để `append` nhận từng món, không nhận cả danh sách làm một món.
+
+Nhược điểm của bộ nhớ: tắt chương trình là mất hết dữ liệu, vì danh sách chỉ nằm trong RAM. Muốn giữ lại sau khi tắt thì phải lưu xuống file như Bài 22, hoặc lưu xuống cơ sở dữ liệu như dưới đây.
+
+### Cơ sở dữ liệu thật với database/sql
+
+Gói `database/sql` của Go không tự nói chuyện trực tiếp với một loại cơ sở dữ liệu cụ thể, nó cần một driver, tức là trình điều khiển, cho loại đó. Ví dụ driver cho Postgres khác driver cho MySQL, khác driver cho SQLite, nhưng cách dùng `database/sql` thì giống nhau.
+
+Các bước cơ bản, ở mức khái niệm:
+
+```go
+db, err := sql.Open("postgres", "chuoi-ket-noi")
+if err != nil {
+    fmt.Println("Loi mo DB:", err)
+    return
+}
+defer db.Close()
+```
+
+- `sql.Open` mở kết nối, nhưng chưa kiểm tra thật là kết nối được hay không, muốn kiểm tra thật thì gọi `db.Ping()`.
+- Create: `db.Exec("INSERT INTO viec (ten, xong) VALUES ($1, $2)", ten, xong)`. Dấu `$1`, `$2` là chỗ trống cho giá trị, để tránh lỗi bảo mật khi người dùng gõ chữ đặc biệt vào, không được nối chuỗi trực tiếp vào câu SQL.
+- Read: `db.Query("SELECT id, ten, xong FROM viec")`, rồi duyệt từng dòng kết quả bằng `rows.Next()` và `rows.Scan(&id, &ten, &xong)`.
+- Update: `db.Exec("UPDATE viec SET xong = $1 WHERE id = $2", true, id)`.
+- Delete: `db.Exec("DELETE FROM viec WHERE id = $2", id)`.
+
+Lưu ý: câu SQL trong ví dụ dùng `$1`, `$2` là kiểu của Postgres. MySQL dùng dấu `?` thay cho `$1`, `$2`. Đổi loại cơ sở dữ liệu thì đổi driver và đổi chỗ trống, còn logic CRUD thì giữ nguyên.
+
+Khi nào dùng file, khi nào dùng cơ sở dữ liệu: dữ liệu ít, một người dùng, không cần tìm kiếm phức tạp thì file là đủ. Dữ liệu nhiều, nhiều người dùng cùng lúc, cần tìm kiếm, lọc, sắp xếp nhanh và an toàn thì dùng cơ sở dữ liệu.
+
+---
+
+## Phụ lục D. Bảng tra nhanh các bài bổ sung
+
+- `switch` / `case` / `default`: rẽ nhánh theo nhiều giá trị, Go không cần `break`.
+- `const`: hằng số, không gán lại được.
+- `bool`: đúng hoặc sai.
+- `float64`: số thực.
+- Ép kiểu: `float64(x)`, `int(3.9)`.
+- `interface`: hợp đồng, kiểu nào có đủ hàm trong hợp đồng thì dùng chung được.
+- `any`: interface rỗng, nhận bất cứ kiểu gì.
+- Generics `[T int | float64]`: viết một lần, dùng nhiều kiểu.
+- `os.ReadFile` / `os.WriteFile`: đọc và ghi file hết một lần.
+- `defer file.Close()`: đóng file khi hàm kết thúc.
+- `json.Marshal` / `json.Unmarshal`: đóng gói và mở gói JSON.
+- `go mod init`: tạo module, `go test ./...`: chạy tất cả test.
+- `context.WithTimeout` / `WithCancel`: bối cảnh có thời hạn hoặc có thể hủy.
+- `sync.Mutex` / `Lock` / `Unlock`: khóa để không sửa cùng lúc.
+- `defer`: hoãn tới cuối hàm. `panic`: dừng vì lỗi nghiêm trọng. `recover`: bắt lại panic trong defer.
+- `fmt.Errorf` với `%w`: bọc lỗi. `errors.Is` / `errors.As`: kiểm tra và lấy lỗi gốc.
+- CRUD: Create, Read, Update, Delete. `database/sql` cần driver riêng cho từng loại cơ sở dữ liệu.
+
+---
+
+*Cập nhật bổ sung: đã viết đầy đủ các bài nâng cao còn thiếu — switch, hằng số và kiểu, interface, generics, file, JSON, go mod, test, context, mutex, defer/panic/recover, bọc lỗi, và cơ sở dữ liệu với CRUD — theo cùng nhịp một bài một khái niệm, bóc từng dòng, dễ hiểu nhưng vẫn đầy đủ.*
