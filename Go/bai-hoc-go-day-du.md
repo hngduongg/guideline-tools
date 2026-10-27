@@ -2002,3 +2002,755 @@ Khi nào dùng file, khi nào dùng cơ sở dữ liệu: dữ liệu ít, một
 ---
 
 *Cập nhật bổ sung: đã viết đầy đủ các bài nâng cao còn thiếu — switch, hằng số và kiểu, interface, generics, file, JSON, go mod, test, context, mutex, defer/panic/recover, bọc lỗi, và cơ sở dữ liệu với CRUD — theo cùng nhịp một bài một khái niệm, bóc từng dòng, dễ hiểu nhưng vẫn đầy đủ.*
+
+---
+
+## Phần nâng cao làm project thật: học dần
+
+Phần này viết theo yêu cầu của Hoàng Dươngg: viết hết phần nâng cao để làm project thật, đầy đủ, giải thích chi tiết, dễ hiểu. Đọc phần này khác phần trước ở một điểm: đừng đọc một lèo. Học dần từng bài, làm xong bài nào thì chạy thử bài đó rồi mới sang bài sau. Project mẫu ở cuối phần này dùng lại tất cả các bài trước, nên cậu sẽ thấy các bài cũ xuất hiện lại trong project thật, không phải học lý thuyết suông.
+
+---
+
+## Bài 31. Thời gian, sắp xếp và biểu thức chính quy
+
+Ba công cụ này gặp trong hầu hết project thật, mỗi công cụ chỉ một ví dụ ngắn.
+
+### Thời gian với time
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    bayGio := time.Now()
+    fmt.Println(bayGio)
+    fmt.Println(bayGio.Format("2006-01-02 15:04:05"))
+
+    ngayMai := bayGio.Add(24 * time.Hour)
+    fmt.Println(ngayMai)
+}
+```
+
+Bóc:
+
+- `time.Now()` lấy thời gian hiện tại.
+- `Format("2006-01-02 15:04:05")` là cách Go định dạng thời gian, rất lạ lúc đầu: Go không dùng `YYYY-MM-DD` như nhiều ngôn ngữ khác, mà dùng một ngày mẫu cố định là 2 tháng 1 năm 2006 lúc 15 giờ 4 phút 5 giây, rồi cậu thay các số trong ngày mẫu đó bằng định dạng cậu muốn. Nhớ ngày mẫu này là nhớ được cách định dạng của Go.
+- `Add(24 * time.Hour)` cộng thêm 24 giờ, tức là sang ngày mai. `time.Hour`, `time.Minute`, `time.Second` là các đơn vị thời gian có sẵn.
+
+### Sắp xếp với sort
+
+```go
+package main
+
+import (
+    "fmt"
+    "sort"
+)
+
+func main() {
+    so := []int{5, 2, 9, 1}
+    sort.Ints(so)
+    fmt.Println(so) // [1 2 5 9]
+
+    ten := []string{"Capybara", "Duongg", "An"}
+    sort.Strings(ten)
+    fmt.Println(ten) // [An Capybara Duongg]
+}
+```
+
+- `sort.Ints` sắp xếp số tăng dần, `sort.Strings` sắp xếp chữ theo thứ tự bảng chữ cái.
+- Sắp xếp này sửa trực tiếp danh sách gốc, không tạo danh sách mới. Muốn giữ danh sách gốc thì copy ra trước bằng `copy`.
+
+### Biểu thức chính quy với regexp
+
+Biểu thức chính quy, viết tắt là regex, là mẫu để kiểm tra xem một chuỗi có đúng dạng không, ví dụ email có đúng dạng không, số điện thoại có đủ số không.
+
+```go
+package main
+
+import (
+    "fmt"
+    "regexp"
+)
+
+func main() {
+    mauEmail := regexp.MustCompile(`^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$`)
+    fmt.Println(mauEmail.MatchString("duongg@vidu.com")) // true
+    fmt.Println(mauEmail.MatchString("duongg@vidu"))     // false
+}
+```
+
+Bóc, chỉ ở mức đủ dùng:
+
+- Dấu backtick bao mẫu, để trong mẫu không phải thoát dấu.
+- `^` là bắt đầu chuỗi, `$` là kết thúc chuỗi, tức là cả chuỗi phải khớp mẫu, không phải chỉ một phần.
+- `[a-z0-9._%+-]+` nghĩa là một hoặc nhiều ký tự trong nhóm đó, dấu `+` nghĩa là một hoặc nhiều.
+- `@` là ký tự @ thật, `\.` là dấu chấm thật, vì dấu chấm trong regex có nghĩa riêng nên phải thoát bằng `\`.
+- `MustCompile` biên dịch mẫu ngay, nếu mẫu sai thì chương trình sẽ panic ngay lúc chạy, để cậu phát hiện sớm. Khi mẫu lấy từ người dùng nhập vào thì dùng `Compile` và kiểm tra lỗi thay vì `MustCompile`.
+
+Lời khuyên: regex mạnh nhưng khó đọc, chỉ dùng khi cần kiểm tra định dạng, đừng dùng regex để thay cho việc cắt chuỗi đơn giản.
+
+---
+
+## Bài 32. Mẫu chạy song song nâng cao
+
+Bài này là phần nâng cao của Bài 15, vẫn chỉ dùng goroutine, channel và WaitGroup, nhưng xếp chúng thành mẫu quen thuộc trong project thật.
+
+### Worker Pool: một nhóm công nhân làm việc từ hàng đợi
+
+Ví dụ đời thường: một quán có 3 nhân viên, khách xếp hàng vào, nhân viên nào rảnh thì nhận khách tiếp theo, không phải mỗi khách lại tuyển một nhân viên mới.
+
+```go
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func congNhan(id int, viec <-chan int, wg *sync.WaitGroup) {
+    defer wg.Done()
+    for v := range viec {
+        fmt.Println("Cong nhan", id, "lam viec", v)
+    }
+}
+
+func main() {
+    viec := make(chan int)
+    var wg sync.WaitGroup
+
+    for i := 1; i <= 3; i++ {
+        wg.Add(1)
+        go congNhan(i, viec, &wg)
+    }
+
+    for v := 1; v <= 9; v++ {
+        viec <- v
+    }
+    close(viec)
+    wg.Wait()
+}
+```
+
+Bóc:
+
+- `viec <-chan int`: tham số kênh chỉ nhận, mũi tên chỉ vào `chan`, nghĩa là hàm này chỉ được nhận việc từ kênh, không được gửi vào.
+- `for v := range viec`: nhận việc từ kênh cho tới khi kênh đóng lại, mỗi lần nhận được một việc thì làm việc đó.
+- `close(viec)`: đóng kênh sau khi gửi hết việc, để các công nhân biết là hết việc và thoát vòng lặp. Quên đóng kênh thì công nhân sẽ chờ mãi.
+- Ba công nhân chạy song song, việc nào được làm bởi công nhân nào thì không chắc chắn, nhưng tổng cộng 9 việc đều được làm xong.
+
+### Pipeline: chuyền việc qua nhiều công đoạn
+
+Pipeline là chuyền dữ liệu qua nhiều công đoạn, mỗi công đoạn là một goroutine, công đoạn sau nhận kết quả của công đoạn trước.
+
+```go
+func nhanDoi(dauVao <-chan int) <-chan int {
+    dauRa := make(chan int)
+    go func() {
+        for v := range dauVao {
+            dauRa <- v * 2
+        }
+        close(dauRa)
+    }()
+    return dauRa
+}
+```
+
+- Hàm này nhận kênh đầu vào, tạo kênh đầu ra mới, chạy một goroutine để nhân đôi từng số nhận được rồi gửi sang kênh đầu ra, xong thì đóng kênh đầu ra.
+- Ghép nhiều công đoạn lại với nhau là thành pipeline, ví dụ đọc file, rồi xử lý, rồi ghi ra, mỗi công đoạn chạy song song với nhau.
+
+### sync.Once và atomic
+
+- `sync.Once`: đảm bảo một việc chỉ chạy đúng một lần, dù nhiều goroutine cùng gọi. Dùng cho việc khởi tạo chỉ cần làm một lần, ví dụ mở kết nối cơ sở dữ liệu lần đầu.
+- `atomic`: các phép tính nguyên tử, tức là một phép tính không bị ngắt giữa chừng bởi goroutine khác. Ví dụ `atomic.AddInt64(&dem, 1)` tăng biến đếm một cách an toàn mà không cần mutex, dùng cho biến đếm đơn giản. Biến đếm phức tạp hơn, có nhiều bước, thì vẫn dùng mutex cho chắc.
+
+---
+
+## Bài 33. Web với Gin: framework phổ biến nhất
+
+Gin là framework web phổ biến nhất của Go, viết sẵn router, xử lý JSON, middleware, để cậu không phải viết lại từ đầu bằng `net/http` thuần.
+
+Cài Gin, trong thư mục project đã có `go.mod`:
+
+```bash
+go get github.com/gin-gonic/gin
+```
+
+Code server Gin tối thiểu:
+
+```go
+package main
+
+import "github.com/gin-gonic/gin"
+
+func main() {
+    r := gin.Default()
+
+    r.GET("/chao", func(c *gin.Context) {
+        c.JSON(200, gin.H{
+            "loiChao": "Xin chao Capybara",
+        })
+    })
+
+    r.Run(":8080")
+}
+```
+
+Bóc:
+
+- `gin.Default()`: tạo router có sẵn log và xử lý lỗi cơ bản. Muốn tự cấu hình từ đầu thì dùng `gin.New()`, nhưng ở đây dùng `Default` cho nhanh.
+- `r.GET("/chao", ...)`: đăng ký đường dẫn `/chao` với phương thức GET, tức là lấy dữ liệu.
+- `c *gin.Context`: `Context` của Gin là bối cảnh của một yêu cầu, chứa cả yêu cầu gửi tới và nơi viết câu trả lời, gộp lại một chỗ cho tiện.
+- `c.JSON(200, gin.H{...})`: trả về JSON với mã trạng thái 200, tức là thành công. `gin.H` là viết tắt của map với khóa chuỗi và giá trị bất cứ kiểu gì, dùng để viết JSON nhanh.
+- `r.Run(":8080")`: chạy server ở cổng 8080, giống `ListenAndServe` ở Bài 16.
+
+Nhận JSON gửi tới, với validation cơ bản:
+
+```go
+type ViecMoi struct {
+    Ten string `json:"ten" binding:"required"`
+}
+
+r.POST("/viec", func(c *gin.Context) {
+    var moi ViecMoi
+    if err := c.ShouldBindJSON(&moi); err != nil {
+        c.JSON(400, gin.H{"loi": err.Error()})
+        return
+    }
+    c.JSON(201, gin.H{"ten": moi.Ten})
+})
+```
+
+- `binding:"required"` là thẻ báo trường này bắt buộc phải có, thiếu thì Gin báo lỗi.
+- `ShouldBindJSON(&moi)`: đọc JSON gửi tới và bỏ vào struct `moi`. Lỗi thì trả về mã 400, tức là yêu cầu sai.
+- Mã 201 nghĩa là tạo mới thành công, khác mã 200 là thành công chung chung.
+
+Middleware, tức là lớp xử lý chạy trước hoặc sau mỗi yêu cầu, ví dụ ghi log, kiểm tra đăng nhập:
+
+```go
+r.Use(func(c *gin.Context) {
+    fmt.Println("Co yeu cau toi:", c.Request.URL.Path)
+    c.Next()
+})
+```
+
+`c.Next()` nghĩa là đi tiếp tới hàm xử lý chính, sau đó quay lại middleware để làm việc sau, ví dụ ghi thời gian xử lý.
+
+Khi nào dùng Gin, khi nào dùng `net/http` thuần: project nhỏ, chỉ vài route thì `net/http` thuần là đủ và nhẹ. Project lớn, nhiều route, cần validation, middleware, nhóm route thì Gin tiết kiệm thời gian hơn nhiều.
+
+---
+
+## Bài 34. Băm mật khẩu và JWT
+
+Hai việc này đi chung với nhau trong đăng nhập: băm mật khẩu để không lưu mật khẩu thật, JWT để cấp vé sau khi đăng nhập đúng.
+
+### Băm mật khẩu bằng bcrypt
+
+Không bao giờ lưu mật khẩu thật vào cơ sở dữ liệu. Lưu bản băm, tức là mật khẩu đã qua một hàm một chiều, không đảo ngược lại được.
+
+Cài thư viện:
+
+```bash
+go get golang.org/x/crypto/bcrypt
+```
+
+Code:
+
+```go
+package main
+
+import (
+    "fmt"
+    "golang.org/x/crypto/bcrypt"
+)
+
+func main() {
+    matKhau := "mat-khau-cua-toi"
+    bam, err := bcrypt.GenerateFromPassword([]byte(matKhau), bcrypt.DefaultCost)
+    if err != nil {
+        fmt.Println("Loi:", err)
+        return
+    }
+    fmt.Println(string(bam))
+
+    err = bcrypt.CompareHashAndPassword(bam, []byte(matKhau))
+    fmt.Println("Dung khong:", err == nil)
+
+    err = bcrypt.CompareHashAndPassword(bam, []byte("sai-roi"))
+    fmt.Println("Dung khong:", err == nil)
+}
+```
+
+Bóc:
+
+- `GenerateFromPassword`: tạo bản băm từ mật khẩu thật, `bcrypt.DefaultCost` là độ khó mặc định, đủ an toàn cho project vừa và nhỏ. Mỗi lần chạy thì bản băm ra khác nhau, vì bcrypt tự thêm muối ngẫu nhiên vào, nên đừng ngạc nhiên khi chạy hai lần ra hai chuỗi khác nhau mà vẫn cùng một mật khẩu.
+- `CompareHashAndPassword`: so sánh mật khẩu người dùng gõ với bản băm đã lưu, đúng thì lỗi là `nil`, sai thì lỗi khác `nil`. Không bao giờ so sánh bằng `==` trực tiếp, vì bản băm mỗi lần mỗi khác.
+- Khi đăng ký thì băm rồi lưu bản băm, khi đăng nhập thì lấy bản băm đã lưu ra so sánh, không lưu và không in mật khẩu thật ra đâu cả.
+
+### JWT: vé đăng nhập
+
+JWT, đọc là "jot", là một chuỗi vé có ba phần nối bằng dấu chấm: header, payload, chữ ký. Server ký vé bằng một khóa bí mật chỉ server biết, rồi đưa vé cho người dùng. Lần sau người dùng gửi vé lại, server kiểm tra chữ ký, đúng thì tin là người dùng đó, không cần hỏi lại mật khẩu.
+
+Các bước, ở mức khái niệm, chưa cần code chi tiết từng thư viện vì mỗi thư viện JWT viết hơi khác nhau:
+
+1. Đăng nhập đúng mật khẩu thì server tạo JWT, trong payload ghi `user_id` và thời gian hết hạn, ví dụ hết hạn sau 24 giờ, rồi ký bằng khóa bí mật.
+2. Server trả JWT về cho người dùng, người dùng lưu vé đó.
+3. Mỗi yêu cầu sau, người dùng gửi vé trong header `Authorization: Bearer <vé>`.
+4. Middleware kiểm tra vé: chữ ký đúng không, còn hạn không, đúng thì lấy `user_id` ra và cho đi tiếp, sai hoặc hết hạn thì trả về mã 401, tức là chưa xác thực.
+
+Lưu ý bảo mật, rất quan trọng:
+
+- Khóa ký JWT phải để trong biến môi trường, không ghi trực tiếp vào code, không push lên GitHub.
+- Vé hết hạn thì phải đăng nhập lại, đừng để vé sống mãi.
+- JWT không phải để lưu thông tin nhạy cảm, vì payload chỉ mã hóa base64, ai cũng đọc được, chỉ có chữ ký là không giả được.
+
+
+---
+
+## Bài 35. Middleware xác thực và phân quyền
+
+Bài này nối Bài 33 và Bài 34 lại: middleware kiểm tra JWT trước khi cho vào route cần đăng nhập, và phân quyền sau khi đã biết người dùng là ai.
+
+Code middleware Gin, ở mức khái niệm, phần kiểm tra chữ ký JWT chi tiết tùy theo thư viện cậu chọn, ở đây viết dạng giả mã rõ ràng để cậu hiểu luồng trước:
+
+```go
+func authMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        token := c.GetHeader("Authorization")
+        if token == "" {
+            c.JSON(401, gin.H{"loi": "thieu token"})
+            c.Abort()
+            return
+        }
+
+        userID, err := kiemTraToken(token)
+        if err != nil {
+            c.JSON(401, gin.H{"loi": "token khong hop le"})
+            c.Abort()
+            return
+        }
+
+        c.Set("userID", userID)
+        c.Next()
+    }
+}
+```
+
+Bóc:
+
+- `c.GetHeader("Authorization")`: lấy vé từ header. Thực tế vé thường có dạng `Bearer <vé>`, cậu cần cắt bỏ chữ `Bearer ` ở đầu trước khi kiểm tra, ở đây viết gọn lại cho dễ hiểu luồng.
+- `c.JSON(401, ...)` rồi `c.Abort()`: trả về lỗi 401 và dừng luôn, không đi tiếp tới hàm xử lý chính. Quên `Abort` là middleware trả lỗi rồi mà hàm chính vẫn chạy tiếp, rất nguy hiểm.
+- `c.Set("userID", userID)`: cất `userID` vào context của yêu cầu, để hàm xử lý chính lấy ra dùng mà không cần kiểm tra lại token.
+- `c.Next()`: cho đi tiếp tới hàm xử lý chính.
+
+Đăng ký middleware cho nhóm route cần đăng nhập, route công khai thì không cần:
+
+```go
+congKhai := r.Group("/cong-khai")
+congKhai.POST("/dang-nhap", dangNhap)
+
+canDangNhap := r.Group("/api")
+canDangNhap.Use(authMiddleware())
+canDangNhap.GET("/viec", layDanhSachViec)
+canDangNhap.POST("/viec", taoViecMoi)
+```
+
+Phân quyền, sau xác thực: xác thực là biết người dùng là ai, phân quyền là biết người dùng đó được làm gì. Ví dụ người dùng chỉ được sửa và xóa việc của chính mình, không được sửa việc của người khác. Cách làm: trong hàm xử lý, lấy `userID` từ context, rồi so sánh với `userID` của việc đó trong cơ sở dữ liệu, khác nhau thì trả về mã 403, tức là đã xác thực rồi nhưng không có quyền.
+
+Mã trạng thái hay nhầm:
+
+- 401: chưa xác thực, thiếu vé hoặc vé sai.
+- 403: đã xác thực rồi, nhưng không có quyền làm việc đó.
+- 404: không tìm thấy tài nguyên.
+- 400: yêu cầu sai định dạng.
+- 500: lỗi phía server, đừng trả chi tiết lỗi nội bộ ra cho người dùng, chỉ ghi log ở server.
+
+---
+
+## Bài 36. Transaction và Migration trong cơ sở dữ liệu
+
+Hai khái niệm này làm cho cơ sở dữ liệu an toàn khi có nhiều việc phải làm cùng nhau, và khi cấu trúc bảng thay đổi theo thời gian.
+
+### Transaction: làm cùng nhau, hoặc không làm gì cả
+
+Ví dụ đời thường: chuyển tiền từ tài khoản A sang tài khoản B phải làm hai việc: trừ tiền ở A và cộng tiền ở B. Nếu trừ xong mà cộng lỗi thì tiền sẽ biến mất, nên hai việc này phải gói lại thành một transaction: cả hai cùng thành công thì mới lưu, một việc lỗi thì hủy cả hai, quay về như chưa làm gì.
+
+Code khái niệm với `database/sql`:
+
+```go
+tx, err := db.Begin()
+if err != nil {
+    fmt.Println("Loi bat dau transaction:", err)
+    return
+}
+defer tx.Rollback()
+
+_, err = tx.Exec("UPDATE tai_khoan SET so_du = so_du - 100 WHERE id = 1")
+if err != nil {
+    fmt.Println("Loi tru tien:", err)
+    return
+}
+
+_, err = tx.Exec("UPDATE tai_khoan SET so_du = so_du + 100 WHERE id = 2")
+if err != nil {
+    fmt.Println("Loi cong tien:", err)
+    return
+}
+
+err = tx.Commit()
+if err != nil {
+    fmt.Println("Loi commit:", err)
+    return
+}
+```
+
+Bóc:
+
+- `db.Begin()`: bắt đầu transaction, từ đây mọi câu lệnh dùng `tx`, không dùng `db` trực tiếp nữa.
+- `defer tx.Rollback()`: hoãn việc hủy transaction tới cuối hàm. Nếu hàm kết thúc mà chưa `Commit` thành công thì `Rollback` sẽ hủy mọi thay đổi, quay về trạng thái ban đầu. Nếu đã `Commit` thành công rồi thì `Rollback` sau đó không làm gì thêm.
+- `tx.Commit()`: lưu tất cả thay đổi trong transaction xuống thật. Chỉ gọi `Commit` khi mọi bước trước đó đều không lỗi.
+
+### Migration: phiên bản của cấu trúc bảng
+
+Migration là các file SQL đánh số thứ tự, mỗi file mô tả một lần thay đổi cấu trúc bảng, ví dụ tạo bảng, thêm cột, đổi kiểu cột. Thay vì sửa bảng bằng tay trên từng máy, cậu chạy migration theo thứ tự là mọi máy đều có cùng cấu trúc bảng.
+
+Ví dụ hai file migration:
+
+- `000001_tao_bang_viec.up.sql`: câu lệnh tạo bảng khi đi lên.
+- `000001_tao_bang_viec.down.sql`: câu lệnh xóa bảng khi đi xuống, để quay lại phiên bản trước.
+
+```sql
+-- 000001_tao_bang_viec.up.sql
+CREATE TABLE viec (
+    id SERIAL PRIMARY KEY,
+    ten TEXT NOT NULL,
+    xong BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+Công cụ migration phổ biến của Go là `golang-migrate`, chạy bằng lệnh, không cần viết code Go cho migration. Nguyên tắc: migration chỉ đi lên, không sửa file migration cũ đã chạy trên máy khác, muốn sửa thì tạo file migration mới. Sửa file cũ đã chạy rồi sẽ làm các máy lệch nhau và rất khó gỡ.
+
+---
+
+## Bài 37. ORM và sqlx: khi nào dùng, khi nào không
+
+ORM là thư viện biến bảng thành struct và câu SQL thành hàm, để cậu không phải viết SQL tay nhiều. `sqlx` thì nhẹ hơn, vẫn viết SQL tay nhưng quét kết quả vào struct cho tiện.
+
+So sánh nhanh, để cậu chọn đúng lúc:
+
+- Viết SQL tay với `database/sql`: kiểm soát hoàn toàn, nhanh, rõ ràng, nhưng viết nhiều code quét kết quả.
+- `sqlx`: vẫn viết SQL tay, nhưng quét kết quả vào struct bằng một dòng, ví dụ `db.Select(&danhSach, "SELECT * FROM viec")`, tiện hơn `database/sql` mà vẫn giữ được SQL.
+- ORM, ví dụ GORM: viết ít code nhất, ví dụ `db.Create(&viec)`, `db.Where("id = ?", id).First(&viec)`, nhưng khi câu truy vấn phức tạp thì ORM sinh ra SQL khó đoán, khó tối ưu, và cậu phải học thêm cách dùng của ORM đó.
+
+Ví dụ GORM ở mức khái niệm, để cậu nhận ra khi gặp:
+
+```go
+type Viec struct {
+    ID   uint   `gorm:"primaryKey"`
+    Ten  string
+    Xong bool
+}
+
+db.Create(&Viec{Ten: "Hoc Go", Xong: false})
+
+var v Viec
+db.First(&v, 1)
+```
+
+- `gorm:"primaryKey"` là thẻ báo trường này là khóa chính.
+- `db.Create` chèn một dòng mới, `db.First` lấy dòng đầu tiên khớp điều kiện.
+
+Lời khuyên cho project đầu tiên: dùng SQL tay hoặc `sqlx` trước, để cậu hiểu thật SQL đang chạy cái gì. Khi project lớn lên, câu truy vấn lặp lại nhiều, thì mới cân nhắc ORM để tiết kiệm thời gian, và vẫn phải kiểm tra SQL mà ORM sinh ra khi gặp vấn đề hiệu năng.
+
+---
+
+## Bài 38. Kiểm thử nâng cao: httptest, mock, benchmark
+
+Bài này là phần nâng cao của Bài 25, dành cho project thật có HTTP và cơ sở dữ liệu.
+
+### Test HTTP bằng httptest
+
+`httptest` là gói test HTTP có sẵn, tạo server giả để gọi hàm xử lý mà không cần chạy server thật.
+
+```go
+func TestChao(t *testing.T) {
+    r := gin.Default()
+    r.GET("/chao", func(c *gin.Context) {
+        c.JSON(200, gin.H{"loiChao": "Xin chao"})
+    })
+
+    req := httptest.NewRequest("GET", "/chao", nil)
+    w := httptest.NewRecorder()
+    r.ServeHTTP(w, req)
+
+    if w.Code != 200 {
+        t.Errorf("muon 200, duoc %d", w.Code)
+    }
+}
+```
+
+- `httptest.NewRequest`: tạo yêu cầu giả.
+- `httptest.NewRecorder`: tạo nơi ghi câu trả lời giả, để test đọc mã trạng thái và nội dung trả về mà không cần trình duyệt thật.
+
+### Mock: giả lập phần chưa có hoặc khó test
+
+Mock là tạo một bản giả của một phần, ví dụ giả lập cơ sở dữ liệu, để test hàm xử lý mà không cần cơ sở dữ liệu thật chạy. Cách làm trong Go thường là dùng interface: hàm xử lý nhận interface, test truyền bản mock thỏa interface đó vào, code thật truyền bản thật vào. Đây chính là lý do Bài 20 về interface lại quan trọng trong project thật.
+
+### Benchmark: đo tốc độ
+
+Benchmark là test đo tốc độ, tên hàm bắt đầu bằng `Benchmark`, chạy nhiều lần để tính thời gian trung bình.
+
+```go
+func BenchmarkTong(b *testing.B) {
+    for i := 0; i < b.N; i++ {
+        Tong(3, 4)
+    }
+}
+```
+
+Chạy bằng `go test -bench=. ./...`, `b.N` là số lần máy tự chọn để đo cho đủ chính xác, cậu không cần tự ghi số lần.
+
+### Race: kiểm tra đua nhau
+
+Chạy test với cờ `-race` như đã nhắc ở Bài 27: `go test -race ./...`. Máy sẽ báo chỗ nào hai goroutine cùng sửa một hộp mà không có khóa, để cậu sửa trước khi đưa lên thật.
+
+
+---
+
+## Bài 39. Profiling, log và cấu hình
+
+Ba việc này làm cho project thật chạy ổn định và gỡ lỗi được khi đã đưa lên server, không còn in ra màn hình để xem như lúc học nữa.
+
+### Profiling với pprof
+
+Profiling là đo xem chương trình tốn thời gian và bộ nhớ ở chỗ nào, để tối ưu đúng chỗ, không đoán mò.
+
+- Bật pprof bằng cách import `_ "net/http/pprof"` trong server, rồi mở trình duyệt vào `/debug/pprof/` để xem.
+- Dùng `go test -bench` kết hợp với profile để xem hàm nào tốn nhiều thời gian nhất.
+- Quy tắc: đừng tối ưu sớm. Viết cho đúng trước, đo bằng profiling sau, chỉ tối ưu chỗ profiling chỉ ra là tốn nhiều nhất. Tối ưu lung tung thường làm code khó đọc mà không nhanh hơn bao nhiêu.
+
+### Log: ghi nhật ký thay vì in ra màn hình
+
+Lúc học thì dùng `fmt.Println` là đủ, project thật thì dùng log có cấp độ và có thời gian.
+
+```go
+import "log"
+
+log.Println("Server bat dau o :8080")
+log.Printf("Nguoi dung %d dang nhap", userID)
+```
+
+- `log` có sẵn của Go đã ghi thời gian kèm theo, tốt hơn `fmt.Println` khi gỡ lỗi trên server.
+- Khi project lớn hơn thì dùng thư viện log có cấu trúc, ví dụ `slog` có sẵn từ Go 1.21, ghi log dưới dạng key-value để máy tìm kiếm cho dễ, ví dụ `slog.Info("dang nhap", "user_id", userID)`.
+- Đừng ghi mật khẩu, token, khóa bí mật vào log, dù là log lỗi. Log lỗi chỉ ghi mã lỗi và ngữ cảnh chung, không ghi dữ liệu nhạy cảm.
+
+### Cấu hình bằng biến môi trường
+
+Cấu hình là những thứ thay đổi theo môi trường: cổng chạy, chuỗi kết nối cơ sở dữ liệu, khóa ký JWT. Đừng ghi trực tiếp vào code, hãy đọc từ biến môi trường.
+
+```go
+import "os"
+
+port := os.Getenv("PORT")
+if port == "" {
+    port = "8080"
+}
+```
+
+- `os.Getenv("PORT")` đọc biến môi trường tên `PORT`. Nếu không có thì dùng giá trị mặc định 8080.
+- Lúc phát triển trên máy mình thì tạo file `.env` để ghi các biến này cho tiện, rồi dùng thư viện đọc `.env` để nạp vào, nhưng file `.env` tuyệt đối không push lên GitHub, phải thêm vào `.gitignore`.
+- Trên server thật thì cấu hình bằng biến môi trường của server, không dùng file `.env` của máy mình.
+
+---
+
+## Bài 40. Docker cho Go: đóng gói và chạy ở đâu cũng giống nhau
+
+Docker là cách đóng gói chương trình cùng môi trường chạy của nó thành một image, để chạy ở máy nào cũng giống nhau, không bị lỗi "máy mình chạy được mà máy server không chạy được".
+
+Dockerfile nhiều giai đoạn, tức là multi-stage, cho Go:
+
+```dockerfile
+# Giai doan 1: build
+FROM golang:1.22 AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . ./
+RUN CGO_ENABLED=0 GOOS=linux go build -o server .
+
+# Giai doan 2: chay
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/server ./
+EXPOSE 8080
+CMD ["./server"]
+```
+
+Bóc:
+
+- Giai đoạn 1 dùng image có sẵn Go để biên dịch code thành file binary tên `server`. `CGO_ENABLED=0` nghĩa là build tĩnh, không phụ thuộc thư viện C của máy, để file binary chạy được trong image nhỏ ở giai đoạn 2.
+- Giai đoạn 2 dùng image `alpine` rất nhỏ, chỉ copy file binary từ giai đoạn 1 sang, không copy cả code nguồn và công cụ build, nên image cuối nhẹ và an toàn hơn.
+- `EXPOSE 8080` báo cổng server dùng, `CMD ["./server"]` là lệnh chạy khi container khởi động.
+
+File `docker-compose.yml` để chạy server cùng cơ sở dữ liệu Postgres trên máy mình cho tiện:
+
+```yaml
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: todo
+    ports:
+      - "5432:5432"
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/todo?sslmode=disable
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+```
+
+- `db` là service cơ sở dữ liệu, `app` là service Go của cậu.
+- Trong `DATABASE_URL`, tên host là `db`, tức là tên service trong compose, không phải `localhost`, vì hai container nói chuyện với nhau qua mạng nội bộ của compose.
+- `depends_on` nghĩa là chạy `db` trước rồi mới chạy `app`, nhưng chỉ đảm bảo thứ tự khởi động, không đảm bảo cơ sở dữ liệu đã sẵn sàng nhận kết nối, nên code Go nên thử kết nối lại vài lần khi khởi động thay vì chết ngay lần đầu.
+
+Chạy bằng `docker compose up --build`, dừng bằng `docker compose down`. Muốn xóa luôn dữ liệu thì thêm `-v`, không thì dữ liệu trong volume vẫn giữ lại lần sau.
+
+---
+
+## Bài 41. Project mẫu hoàn chỉnh: Todo API có đăng nhập
+
+Bài này gom tất cả các bài trước lại thành một project thật, ở mức đủ để cậu làm theo từng bước, không phải một đống code dài không biết bắt đầu từ đâu.
+
+### Yêu cầu của project
+
+- Người dùng đăng ký bằng tên và mật khẩu, mật khẩu được băm bằng bcrypt rồi mới lưu.
+- Người dùng đăng nhập đúng thì nhận JWT, các route sau phải gửi JWT mới được dùng.
+- Mỗi người dùng chỉ xem, sửa, xóa việc của chính mình.
+- Việc có các trường: ID, tên, đã xong hay chưa, thời gian tạo.
+- Dữ liệu lưu trong Postgres khi chạy thật, lưu trong bộ nhớ khi chạy thử nhanh, hai cách này đổi cho nhau được vì logic CRUD giống nhau.
+
+### Cấu trúc thư mục gợi ý
+
+```
+todo-api/
+  go.mod
+  main.go
+  internal/
+    handler/
+      auth.go
+      viec.go
+    service/
+      auth.go
+      viec.go
+    repo/
+      viec.go
+    model/
+      viec.go
+      nguoi.go
+```
+
+Bóc cấu trúc, đây là cách xếp lớp quen thuộc, mỗi lớp chỉ làm một việc:
+
+- `model`: định nghĩa struct, không có logic, chỉ có dữ liệu.
+- `repo`: nói chuyện với cơ sở dữ liệu, viết SQL hoặc gọi ORM, trả về struct.
+- `service`: logic nghiệp vụ, ví dụ kiểm tra quyền, băm mật khẩu, tạo JWT, gọi repo.
+- `handler`: nhận yêu cầu HTTP, đọc JSON, gọi service, trả JSON về, không viết SQL trực tiếp ở đây.
+- `main.go`: nối các lớp lại với nhau, đăng ký route, chạy server.
+
+Lợi ích của cách xếp này: muốn đổi cơ sở dữ liệu thì chỉ sửa lớp `repo`, muốn đổi framework web thì chỉ sửa lớp `handler`, logic ở `service` giữ nguyên.
+
+### Luồng chạy của một yêu cầu tạo việc mới
+
+1. Trình duyệt gửi POST tới `/api/viec`, kèm header JWT và JSON `{"ten": "Hoc Go"}`.
+2. Middleware xác thực kiểm tra JWT, lấy `userID` ra, cất vào context.
+3. Handler đọc JSON, kiểm tra trường `ten` bắt buộc, nếu thiếu thì trả 400.
+4. Handler gọi service, service kiểm tra quyền, tạo việc mới với `userID` đó.
+5. Service gọi repo, repo chèn một dòng mới vào bảng, lấy ID trả về.
+6. Handler trả về JSON việc mới tạo với mã 201.
+
+### Chạy thử bằng curl, không cần giao diện
+
+Đăng ký, đăng nhập, tạo việc, lấy danh sách, sửa việc, xóa việc, mỗi bước đều dùng `curl` để cậu thấy API chạy thật mà không cần viết giao diện web:
+
+```bash
+curl -X POST http://localhost:8080/cong-khai/dang-ky \
+  -H "Content-Type: application/json" \
+  -d '{"ten": "Duongg", "matKhau": "mat-khau-cua-toi"}'
+
+curl -X POST http://localhost:8080/cong-khai/dang-nhap \
+  -H "Content-Type: application/json" \
+  -d '{"ten": "Duongg", "matKhau": "mat-khau-cua-toi"}'
+
+curl http://localhost:8080/api/viec \
+  -H "Authorization: Bearer <TOKEN_VUA_NHAN_DUOC>"
+```
+
+Thay `<TOKEN_VUA_NHAN_DUOC>` bằng token thật mà bước đăng nhập trả về. Nếu quên gửi token thì server trả 401, nếu gửi token của người khác mà sửa việc của mình thì server trả 403, đúng như Bài 35.
+
+### Checklist trước khi đưa project lên thật
+
+- [ ] Mật khẩu đã băm, không lưu mật khẩu thật.
+- [ ] Khóa JWT và chuỗi kết nối cơ sở dữ liệu để trong biến môi trường, không push lên GitHub.
+- [ ] File `.env` đã thêm vào `.gitignore`.
+- [ ] Mọi route cần đăng nhập đều đã gắn middleware xác thực, không sót route nào.
+- [ ] Mọi hàm có trả về lỗi đều đã kiểm tra `err != nil` ngay sau khi gọi.
+- [ ] Đã chạy `go test ./...` và `go test -race ./...` mà không có test nào hỏng.
+- [ ] Đã chạy thử bằng Docker trên máy mình, server và cơ sở dữ liệu cùng chạy được.
+- [ ] Log không ghi mật khẩu, token, khóa bí mật.
+- [ ] Đã có backup cho cơ sở dữ liệu, hoặc ít nhất đã biết cách backup.
+
+---
+
+## Bài 42. Lộ trình học dần sau 30 bài
+
+Bài cuối này không dạy code mới, mà là cách học dần phần nâng cao mà không bị ngợp, đúng như cậu dặn là để học dần.
+
+Thứ tự gợi ý, mỗi bước làm xong một project nhỏ rồi mới sang bước sau:
+
+1. Làm xong Todo API bằng `net/http` thuần, lưu trong bộ nhớ, chạy được bằng `curl`.
+2. Đổi Todo API sang lưu trong Postgres, thêm transaction cho những chỗ cần làm cùng nhau.
+3. Đổi Todo API sang Gin, thêm middleware xác thực bằng JWT và băm mật khẩu.
+4. Viết test cho Todo API bằng `httptest`, chạy `go test -race` cho sạch.
+5. Đóng gói Todo API bằng Docker, chạy cùng Postgres bằng `docker-compose`.
+6. Thêm một tính năng thật vào Todo API, ví dụ nhắc việc quá hạn bằng goroutine và channel, hoặc xuất danh sách ra file.
+
+Mỗi bước chỉ thêm một thứ mới vào project đã chạy được, đừng viết lại project từ đầu mỗi lần học thứ mới. Project chạy được rồi thì giữ nó chạy được, thêm tính năng mới mà làm hỏng tính năng cũ thì chạy test lại ngay để biết hỏng ở đâu.
+
+Khi gặp lỗi không hiểu, làm theo thứ tự này: đọc thông báo lỗi từ trên xuống dưới, tìm dòng đầu tiên nhắc tới file của mình, không phải file của thư viện, rồi mở đúng file đó, đúng dòng đó ra xem. Đa số lỗi đều nằm ở dòng đó, không phải ở đâu xa.
+
+---
+
+## Phụ lục E. Bảng tra nhanh phần project thật
+
+- `time.Now`, `Format`, `Add`: thời gian hiện tại, định dạng, cộng thời gian.
+- `sort.Ints`, `sort.Strings`: sắp xếp số và chữ.
+- `regexp.MustCompile`, `MatchString`: biên dịch mẫu và kiểm tra chuỗi khớp mẫu không.
+- Worker Pool: nhiều công nhân, một kênh việc, đóng kênh khi hết việc.
+- Pipeline: chuyền dữ liệu qua nhiều công đoạn, mỗi công đoạn là một goroutine.
+- `sync.Once`: chạy đúng một lần. `atomic`: tăng đếm an toàn không cần mutex.
+- Gin: `gin.Default`, `GET`, `POST`, `ShouldBindJSON`, `binding:"required"`, middleware với `c.Next` và `c.Abort`.
+- Bcrypt: `GenerateFromPassword` để băm, `CompareHashAndPassword` để so sánh.
+- JWT: header, payload, chữ ký, hết hạn, gửi qua header `Authorization: Bearer`.
+- 401: chưa xác thực. 403: đã xác thực nhưng không có quyền. 404: không tìm thấy. 400: yêu cầu sai. 500: lỗi server.
+- Transaction: `Begin`, `Commit`, `defer Rollback`.
+- Migration: file SQL đánh số, chỉ đi lên, không sửa file cũ đã chạy.
+- `sqlx`: viết SQL tay nhưng quét vào struct cho tiện. ORM: viết ít code nhất, nhưng phải kiểm tra SQL sinh ra.
+- `httptest`: test HTTP không cần server thật. Benchmark: hàm bắt đầu bằng `Benchmark`.
+- `pprof`: đo hiệu năng. `slog`: log có cấu trúc. Biến môi trường: `os.Getenv`.
+- Docker multi-stage: giai đoạn build dùng image Go, giai đoạn chạy dùng image nhỏ, chỉ copy binary sang.
+- `docker-compose`: chạy server cùng cơ sở dữ liệu, tên host trong compose là tên service.
+
+---
+
+*Cập nhật phần project thật: đã viết đầy đủ các bài nâng cao để làm project thật — thời gian, sắp xếp, regex, mẫu song song, Gin, bcrypt và JWT, middleware xác thực và phân quyền, transaction và migration, ORM và sqlx, kiểm thử nâng cao, profiling, log và cấu hình, Docker, project mẫu Todo API có đăng nhập, và lộ trình học dần — theo cùng nhịp một bài một khái niệm, bóc từng dòng, dễ hiểu nhưng vẫn đầy đủ.*
